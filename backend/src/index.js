@@ -1,4 +1,4 @@
-require('dotenv').config();
+ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -6,6 +6,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 
 const { syncDatabase } = require('./models');
+const ensureAdmin = require('./utils/ensureAdmin');
 const initSockets = require('./sockets');
 
 const authRoutes = require('./routes/auth.routes');
@@ -56,6 +57,7 @@ const PORT = process.env.PORT || 5000;
 (async () => {
   try {
     await syncDatabase();
+    await ensureAdmin();
     server.listen(PORT, () => {
       console.log(`✅ Serveur démarré sur http://localhost:${PORT}`);
       console.log(`   Client autorisé : ${CLIENT_URL}`);
