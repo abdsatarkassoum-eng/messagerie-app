@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+ import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ConversationSummary, Message } from '../types';
 import MessageBubble from './MessageBubble';
@@ -77,7 +77,8 @@ export default function ChatWindow({
           </div>
         )}
         {messages.map((m, idx) => {
-          const isMine = (m.sender?.id || m.senderId) === user?.id;
+          const mineId = m.sender?.id || m.senderId;
+          const isMine = !!mineId && !!user?.id && String(mineId) === String(user.id);
           const showSender = conversation.isGroup && (idx === 0 || messages[idx - 1].senderId !== m.senderId);
           return <MessageBubble key={m.id} message={m} isMine={isMine} showSender={showSender} />;
         })}
