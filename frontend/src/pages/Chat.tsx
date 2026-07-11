@@ -186,7 +186,7 @@ export default function Chat() {
         ) : (
           <div className="empty-state">
             <div style={{ fontSize: '2.4rem' }}>👋</div>
-            <h2 style={{ margin: 0 }}>Bienvenue{user ? `, ${user.username}` : ''}</h2>
+            <h2 style={{ margin: 0 }}>Bienvenue sur FriEnds{user ? `, ${user.username}` : ''}</h2>
             <p>Sélectionnez une conversation ou commencez-en une nouvelle avec un ami.</p>
           </div>
         )}
