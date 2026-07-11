@@ -56,6 +56,9 @@ export default function RequestInvite() {
     <div className="auth-shell">
       <div className="card auth-card">
         <div className="auth-logo" />
+<div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-strong)', marginBottom: 10 }}>
+  FriEnds
+</div>
 
         {step === 'loading' && <p>Vérification de l'invitation…</p>}
 
