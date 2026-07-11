@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+ const { Op } = require('sequelize');
 const { FriendRequest, Friendship, User } = require('../models');
 const { sanitize } = require('./auth.controller');
 
@@ -42,7 +42,6 @@ async function sendRequest(req, res) {
 
     const request = await FriendRequest.create({ senderId, receiverId });
 
-    // notifier en temps réel si le module socket est disponible
     req.app.get('io')?.to(`user:${receiverId}`).emit('friend_request:new', {
       id: request.id,
       sender: sanitize(req.user),
@@ -98,7 +97,6 @@ async function listRequests(req, res) {
   try {
     const received = await FriendRequest.findAll({
       where: { receiverId: req.user.id, status: 'pending' },
-      include: [{ model: User, as: undefined }],
     });
 
     const senders = await User.findAll({
