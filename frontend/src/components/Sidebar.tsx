@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ConversationSummary, FriendRequestItem, UserProfile } from '../types';
 import NewGroupModal from './NewGroupModal';
 import ProfileModal from './ProfileModal';
+import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
 
-type Tab = 'chats' | 'friends' | 'requests';
+type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
 interface Props {
   conversations: ConversationSummary[];
@@ -121,13 +122,16 @@ export default function Sidebar({
 
       <div className="tabs">
         <div className={`tab ${tab === 'chats' ? 'active' : ''}`} onClick={() => setTab('chats')}>Discussions</div>
+        <div className={`tab ${tab === 'status' ? 'active' : ''}`} onClick={() => setTab('status')}>Statuts</div>
         <div className={`tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')}>Amis</div>
         <div className={`tab ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')}>
           Demandes {requests.length > 0 && <span className="badge">{requests.length}</span>}
         </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {tab === 'status' && <StatusList />}
+
+      <div style={{ flex: 1, overflowY: 'auto', display: tab === 'status' ? 'none' : 'block' }}>
         {tab === 'chats' &&
           (conversations.length === 0 ? (
             <p style={{ padding: 20, color: 'var(--text-muted)', fontSize: '0.88rem' }}>
@@ -229,4 +233,4 @@ export default function Sidebar({
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
-}
+                                   }
