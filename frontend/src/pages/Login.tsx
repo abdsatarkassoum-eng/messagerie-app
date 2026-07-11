@@ -28,6 +28,9 @@ export default function Login() {
     <div className="auth-shell">
       <form className="card auth-card" onSubmit={handleSubmit}>
         <div className="auth-logo" />
+<div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-strong)', marginBottom: 10 }}>
+  FriEnds
+</div>
         <h1 style={{ fontSize: '1.5rem', margin: '0 0 4px' }}>Bon retour</h1>
         <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: 24 }}>
           Connectez-vous pour retrouver vos conversations.
