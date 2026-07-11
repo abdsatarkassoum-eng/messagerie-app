@@ -1,20 +1,24 @@
-const bcrypt = require('bcryptjs');
-const { Op } = require('sequelize');
+ const bcrypt = require('bcryptjs');
+const { Op, Sequelize } = require('sequelize');
 const { User } = require('../models');
 const { sanitize } = require('./auth.controller');
 
 // GET /api/users/search?q=
 async function searchUsers(req, res) {
   try {
-    const q = (req.query.q || '').trim();
+    const q = (req.query.q || '').trim().toLowerCase();
     if (!q) return res.json({ users: [] });
 
     const users = await User.findAll({
       where: {
         id: { [Op.ne]: req.user.id },
         [Op.or]: [
-          { username: { [Op.like]: `%${q}%` } },
-          { email: { [Op.like]: `%${q}%` } },
+          Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('username')), {
+            [Op.like]: `%${q}%`,
+          }),
+          Sequelize.where(Sequelize.fn('LOWER', Sequelize.col('email')), {
+            [Op.like]: `%${q}%`,
+          }),
         ],
       },
       limit: 20,
