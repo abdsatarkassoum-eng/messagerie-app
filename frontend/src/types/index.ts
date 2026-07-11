@@ -1,4 +1,4 @@
-export interface UserProfile {
+ export interface UserProfile {
   id: string;
   username: string;
   email: string;
@@ -67,4 +67,21 @@ export interface JoinRequestItem {
   paymentRequired: boolean;
   paymentStatus: 'none' | 'pending' | 'paid' | 'failed';
   createdAt: string;
+}
+
+export interface StatusItem {
+  id: string;
+  type: 'text' | 'image' | 'video';
+  content: string | null;
+  fileUrl: string | null;
+  backgroundColor: string | null;
+  createdAt: string;
+  expiresAt: string;
+  viewed: boolean;
+}
+
+export interface StatusGroup {
+  user: UserProfile;
+  statuses: StatusItem[];
+  hasUnseen: boolean;
 }
