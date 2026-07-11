@@ -1,4 +1,4 @@
-const { Conversation, ConversationMember, Message, User } = require('../models');
+ const { Conversation, ConversationMember, Message, User } = require('../models');
 const { sanitize } = require('./auth.controller');
 
 async function assertMember(conversationId, userId) {
@@ -55,6 +55,7 @@ async function sendMessage(req, res) {
     const payload = {
       id: message.id,
       conversationId,
+      senderId: req.user.id,
       sender: sanitize(req.user),
       type: message.type,
       content: message.content,
