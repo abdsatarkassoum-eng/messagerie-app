@@ -6,7 +6,7 @@ d'outil tiers dans le code ou l'interface.
 
 ## Fonctionnalités
 
-- Comptes utilisateurs avec photo de profil, e-mail, mot de passe (JWT + bcrypt)
+- Comptes utilisateurs avec photo de profil, e-mail, mot de passe (JWT + bcrypt) 
 - Liste d'amis, demandes d'amis (envoyer / accepter / refuser), recherche d'utilisateurs
 - Messagerie privée et groupes (admins / membres)
 - Texte, images, vidéos, documents, messages vocaux, émojis
