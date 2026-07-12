@@ -4,10 +4,10 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ConversationSummary, FriendRequestItem, UserProfile } from '../types';
 import NewGroupModal from './NewGroupModal';
-import ProfileModal from './ProfileModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
-import { MessageCircle, CircleDashed, Users, Bell, Plus, Settings } from 'lucide-react';
+import { avatarColorFor } from '../utils/avatarColor';
+import { MessageCircle, CircleDashed, Users, Bell, Plus } from 'lucide-react';
 
 type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
@@ -20,6 +20,34 @@ interface Props {
   onGroupCreated: (conversationId: string) => void;
   friends: UserProfile[];
   refreshFriends: () => void;
+}
+
+function AvatarCircle({
+  url,
+  name,
+  size = 42,
+}: {
+  url: string | null | undefined;
+  name: string;
+  size?: number;
+}) {
+  return (
+    <div
+      className="avatar"
+      style={{
+        width: size,
+        height: size,
+        background: url ? undefined : avatarColorFor(name),
+        color: url ? undefined : '#fff',
+      }}
+    >
+      {url ? (
+        <img src={resolveFileUrl(url)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
+      ) : (
+        name[0]?.toUpperCase()
+      )}
+    </div>
+  );
 }
 
 export default function Sidebar({
@@ -38,7 +66,6 @@ export default function Sidebar({
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     if (tab === 'requests') loadRequests();
@@ -79,23 +106,10 @@ export default function Sidebar({
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="avatar" style={{ width: 38, height: 38 }} onClick={() => setShowProfile(true)}>
-            {user?.avatarUrl ? (
-              <img src={resolveFileUrl(user.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
-            ) : (
-              user?.username[0]?.toUpperCase()
-            )}
-          </div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{user?.username}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>En ligne</div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className="btn btn-ghost btn-icon" onClick={() => setShowNewGroup(true)} title="Nouveau groupe"><Plus size={18} /></button>
-          <button className="btn btn-ghost btn-icon" onClick={() => setShowProfile(true)} title="Profil"><Settings size={18} /></button>
-        </div>
+        <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>Discussions</div>
+        <button className="btn btn-ghost btn-icon" onClick={() => setShowNewGroup(true)} title="Nouveau groupe">
+          <Plus size={18} />
+        </button>
       </div>
 
       <div style={{ padding: '12px 16px 0' }}>
@@ -157,13 +171,7 @@ export default function Sidebar({
                   onClick={() => onSelectConversation(c.id)}
                 >
                   <div style={{ position: 'relative' }}>
-                    <div className="avatar" style={{ width: 42, height: 42 }}>
-                      {c.avatarUrl ? (
-                        <img src={resolveFileUrl(c.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
-                      ) : (
-                        c.name?.[0]?.toUpperCase()
-                      )}
-                    </div>
+                    <AvatarCircle url={c.avatarUrl} name={c.name || '?'} />
                     {!c.isGroup && (
                       <div className={`presence-dot ${isOnline ? 'online' : ''}`} style={{ position: 'absolute', right: -1, bottom: -1 }} />
                     )}
@@ -188,9 +196,7 @@ export default function Sidebar({
             friends.map((f) => (
               <div key={f.id} className="conversation-item" onClick={() => onOpenPrivateChat(f.id)}>
                 <div style={{ position: 'relative' }}>
-                  <div className="avatar" style={{ width: 42, height: 42 }}>
-                    {f.avatarUrl ? <img src={resolveFileUrl(f.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} /> : f.username[0]?.toUpperCase()}
-                  </div>
+                  <AvatarCircle url={f.avatarUrl} name={f.username} />
                   <div className={`presence-dot ${onlineStatus[f.id] ? 'online' : ''}`} style={{ position: 'absolute', right: -1, bottom: -1 }} />
                 </div>
                 <div>
@@ -208,9 +214,7 @@ export default function Sidebar({
             requests.map((r) => (
               <div key={r.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <div className="avatar" style={{ width: 36, height: 36 }}>
-                    {r.sender.avatarUrl ? <img src={resolveFileUrl(r.sender.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} /> : r.sender.username[0]?.toUpperCase()}
-                  </div>
+                  <AvatarCircle url={r.sender.avatarUrl} name={r.sender.username} size={36} />
                   <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.sender.username}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -238,8 +242,6 @@ export default function Sidebar({
           }}
         />
       )}
-
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
-                               }
+      }
