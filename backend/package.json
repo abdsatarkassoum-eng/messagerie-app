@@ -1,4 +1,4 @@
-{
+ {
   "name": "messagerie-backend",
   "version": "1.0.0",
   "description": "Backend de l'application de messagerie (API REST + WebSocket)",
@@ -10,6 +10,7 @@
     "test": "node --test test/"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.45.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -27,4 +28,4 @@
   "devDependencies": {
     "nodemon": "^3.1.4"
   }
-}
+ }
