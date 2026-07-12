@@ -1,6 +1,7 @@
-const bcrypt = require('bcryptjs');
+ const bcrypt = require('bcryptjs');
 const { User, JoinRequest } = require('../models');
 const generateToken = require('../utils/generateToken');
+const uploadFile = require('../utils/uploadFile');
 
 const INVITE_ONLY = process.env.INVITE_ONLY === 'true';
 
@@ -54,7 +55,7 @@ async function register(req, res) {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const avatarUrl = req.file ? `/uploads/avatars/${req.file.filename}` : null;
+    const avatarUrl = req.file ? await uploadFile(req.file, 'avatars') : null;
 
     const user = await User.create({
       username,
