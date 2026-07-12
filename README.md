@@ -1,4 +1,4 @@
-# Messagerie — Application de messagerie complète
+# Messagerie — Application de messagerie complète 
 
 Application de messagerie moderne inspirée de Messenger et Signal, avec un design original.
 Le code vous appartient intégralement : aucune dépendance à un service d'IA, aucune mention
