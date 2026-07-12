@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+ import React, { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -6,6 +6,7 @@ import { ConversationSummary, Message, UserProfile } from '../types';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import CallModal, { CallSession } from '../components/CallModal';
+import TopNav from '../components/TopNav';
 
 export default function Chat() {
   const { user } = useAuth();
@@ -156,45 +157,48 @@ export default function Chat() {
   };
 
   return (
-    <div className="app-shell">
-      <div className={mobileShowChat ? 'sidebar hidden-mobile' : 'sidebar'}>
-        <Sidebar
-          conversations={conversations}
-          activeConversationId={activeId}
-          onSelectConversation={selectConversation}
-          onlineStatus={onlineStatus}
-          onOpenPrivateChat={openPrivateChat}
-          onGroupCreated={handleGroupCreated}
-          friends={friends}
-          refreshFriends={loadFriends}
-        />
-      </div>
-
-      <div className={mobileShowChat ? 'chat-area' : 'chat-area hidden-mobile'} style={{ display: mobileShowChat || activeConversation ? 'flex' : undefined }}>
-        {activeConversation ? (
-          <ChatWindow
-            conversation={activeConversation}
-            messages={messagesByConv[activeConversation.id] || []}
-            typingUsers={(typingByConv[activeConversation.id] || []).filter((id) => id !== user?.id)}
+    <div className="app-root">
+      <TopNav />
+      <div className="app-shell">
+        <div className={mobileShowChat ? 'sidebar hidden-mobile' : 'sidebar'}>
+          <Sidebar
+            conversations={conversations}
+            activeConversationId={activeId}
+            onSelectConversation={selectConversation}
             onlineStatus={onlineStatus}
-            onSendText={sendText}
-            onSendFile={sendFile}
-            onTyping={handleTyping}
-            onStartCall={startCall}
-            onBack={() => setMobileShowChat(false)}
+            onOpenPrivateChat={openPrivateChat}
+            onGroupCreated={handleGroupCreated}
+            friends={friends}
+            refreshFriends={loadFriends}
           />
-        ) : (
-          <div className="empty-state">
-            <div style={{ fontSize: '2.4rem' }}>👋</div>
-            <h2 style={{ margin: 0 }}>Bienvenue sur FriEnds{user ? `, ${user.username}` : ''}</h2>
-            <p>Sélectionnez une conversation ou commencez-en une nouvelle avec un ami.</p>
-          </div>
+        </div>
+
+        <div className={mobileShowChat ? 'chat-area' : 'chat-area hidden-mobile'} style={{ display: mobileShowChat || activeConversation ? 'flex' : undefined }}>
+          {activeConversation ? (
+            <ChatWindow
+              conversation={activeConversation}
+              messages={messagesByConv[activeConversation.id] || []}
+              typingUsers={(typingByConv[activeConversation.id] || []).filter((id) => id !== user?.id)}
+              onlineStatus={onlineStatus}
+              onSendText={sendText}
+              onSendFile={sendFile}
+              onTyping={handleTyping}
+              onStartCall={startCall}
+              onBack={() => setMobileShowChat(false)}
+            />
+          ) : (
+            <div className="empty-state">
+              <div style={{ fontSize: '2.4rem' }}>👋</div>
+              <h2 style={{ margin: 0 }}>Bienvenue sur FriEnds{user ? `, ${user.username}` : ''}</h2>
+              <p>Sélectionnez une conversation ou commencez-en une nouvelle avec un ami.</p>
+            </div>
+          )}
+        </div>
+
+        {callSession && socket && (
+          <CallModal socket={socket} session={callSession} onClose={() => setCallSession(null)} />
         )}
       </div>
-
-      {callSession && socket && (
-        <CallModal socket={socket} session={callSession} onClose={() => setCallSession(null)} />
-      )}
     </div>
   );
-}
+  }
