@@ -7,6 +7,7 @@ import NewGroupModal from './NewGroupModal';
 import ProfileModal from './ProfileModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
+import { MessageCircle, CircleDashed, Users, Bell, Plus, Settings } from 'lucide-react';
 
 type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
@@ -92,8 +93,8 @@ export default function Sidebar({
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <button className="btn btn-ghost btn-icon" onClick={() => setShowNewGroup(true)} title="Nouveau groupe">➕</button>
-          <button className="btn btn-ghost btn-icon" onClick={() => setShowProfile(true)} title="Profil">⚙️</button>
+          <button className="btn btn-ghost btn-icon" onClick={() => setShowNewGroup(true)} title="Nouveau groupe"><Plus size={18} /></button>
+          <button className="btn btn-ghost btn-icon" onClick={() => setShowProfile(true)} title="Profil"><Settings size={18} /></button>
         </div>
       </div>
 
@@ -121,11 +122,19 @@ export default function Sidebar({
       )}
 
       <div className="tabs">
-        <div className={`tab ${tab === 'chats' ? 'active' : ''}`} onClick={() => setTab('chats')}>Discussions</div>
-        <div className={`tab ${tab === 'status' ? 'active' : ''}`} onClick={() => setTab('status')}>Statuts</div>
-        <div className={`tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')}>Amis</div>
+        <div className={`tab ${tab === 'chats' ? 'active' : ''}`} onClick={() => setTab('chats')}>
+          <span className="tab-icon-row"><MessageCircle size={16} /> Discussions</span>
+        </div>
+        <div className={`tab ${tab === 'status' ? 'active' : ''}`} onClick={() => setTab('status')}>
+          <span className="tab-icon-row"><CircleDashed size={16} /> Statuts</span>
+        </div>
+        <div className={`tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')}>
+          <span className="tab-icon-row"><Users size={16} /> Amis</span>
+        </div>
         <div className={`tab ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')}>
-          Demandes {requests.length > 0 && <span className="badge">{requests.length}</span>}
+          <span className="tab-icon-row">
+            <Bell size={16} /> Demandes {requests.length > 0 && <span className="badge">{requests.length}</span>}
+          </span>
         </div>
       </div>
 
@@ -233,4 +242,4 @@ export default function Sidebar({
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
     </div>
   );
-                                   }
+                               }
