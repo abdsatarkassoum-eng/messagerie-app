@@ -1,6 +1,7 @@
-const { Op } = require('sequelize');
+ const { Op } = require('sequelize');
 const { Status, StatusView, User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
+const uploadFile = require('../utils/uploadFile');
 
 const STATUS_LIFETIME_MS = 24 * 60 * 60 * 1000; // 24 heures
 
@@ -19,7 +20,7 @@ async function createStatus(req, res) {
 
     if (req.file) {
       const folder = req.file.mimetype.startsWith('video/') ? 'videos' : 'images';
-      fileUrl = `/uploads/${folder}/${req.file.filename}`;
+      fileUrl = await uploadFile(req.file, folder);
       type = folder === 'videos' ? 'video' : 'image';
     } else {
       type = 'text';
