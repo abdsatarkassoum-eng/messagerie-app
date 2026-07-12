@@ -1,80 +1,96 @@
- import React, { useRef, useState } from 'react';
-import EmojiPicker from 'emoji-picker-react';
-import { Smile, Paperclip, Send } from 'lucide-react';
+ import React, { useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { ConversationSummary, Message } from '../types';
+import MessageBubble from './MessageBubble';
+import MessageInput from './MessageInput';
+import { resolveFileUrl } from '../utils/url';
+import { ArrowLeft, Phone, Video } from 'lucide-react';
 
 interface Props {
-  onSend: (content: string) => void;
+  conversation: ConversationSummary;
+  messages: Message[];
+  typingUsers: string[];
+  onlineStatus: Record<string, boolean>;
+  onSendText: (content: string) => void;
   onSendFile: (file: File) => void;
   onTyping: (isTyping: boolean) => void;
-  disabled?: boolean;
+  onStartCall: (callType: 'audio' | 'video') => void;
+  onBack?: () => void;
 }
 
-export default function MessageInput({ onSend, onSendFile, onTyping, disabled }: Props) {
-  const [text, setText] = useState('');
-  const [showEmoji, setShowEmoji] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+export default function ChatWindow({
+  conversation,
+  messages,
+  typingUsers,
+  onlineStatus,
+  onSendText,
+  onSendFile,
+  onTyping,
+  onStartCall,
+  onBack,
+}: Props) {
+  const { user } = useAuth();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = (value: string) => {
-    setText(value);
-    onTyping(true);
-    if (typingTimeout.current) clearTimeout(typingTimeout.current);
-    typingTimeout.current = setTimeout(() => onTyping(false), 1500);
-  };
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages.length]);
 
-  const handleSend = () => {
-    if (!text.trim()) return;
-    onSend(text.trim());
-    setText('');
-    onTyping(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onSendFile(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
+  const other = !conversation.isGroup ? conversation.members.find((m) => m.id !== user?.id) : null;
+  const isOnline = other ? onlineStatus[other.id] : false;
 
   return (
-    <div className="composer" style={{ position: 'relative' }}>
-      {showEmoji && (
-        <div style={{ position: 'absolute', bottom: 60, left: 12, zIndex: 20 }}>
-          <EmojiPicker
-            onEmojiClick={(emojiData) => {
-              handleChange(text + emojiData.emoji);
-            }}
-          />
+    <div className="chat-area">
+      <div className="chat-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {onBack && (
+            <button className="btn btn-ghost btn-icon" onClick={onBack}><ArrowLeft size={18} /></button>
+          )}
+          <div className="avatar" style={{ width: 40, height: 40 }}>
+            {conversation.avatarUrl ? (
+              <img src={resolveFileUrl(conversation.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
+            ) : (
+              conversation.name?.[0]?.toUpperCase()
+            )}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700 }}>{conversation.name}</div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+              {conversation.isGroup
+                ? `${conversation.members.length} membres`
+                : isOnline
+                ? 'En ligne'
+                : 'Hors ligne'}
+            </div>
+          </div>
         </div>
-      )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-ghost btn-icon" title="Appel audio" onClick={() => onStartCall('audio')}><Phone size={18} /></button>
+          <button className="btn btn-ghost btn-icon" title="Appel vidéo" onClick={() => onStartCall('video')}><Video size={18} /></button>
+        </div>
+      </div>
 
-      <button type="button" className="btn btn-ghost btn-icon" onClick={() => setShowEmoji((v) => !v)} title="Émojis">
-        <Smile size={20} />
-      </button>
+      <div className="messages-scroll" ref={scrollRef}>
+        {messages.length === 0 && (
+          <div className="empty-state">
+            <div style={{ fontSize: '2rem' }}>💬</div>
+            <p>Dites bonjour ! Envoyez votre premier message à {conversation.name}.</p>
+          </div>
+        )}
+        {messages.map((m, idx) => {
+          const mineId = m.sender?.id || m.senderId;
+          const isMine = !!mineId && !!user?.id && String(mineId) === String(user.id);
+          const showSender = conversation.isGroup && (idx === 0 || messages[idx - 1].senderId !== m.senderId);
+          return <MessageBubble key={m.id} message={m} isMine={isMine} showSender={showSender} />;
+        })}
+        {typingUsers.length > 0 && (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '4px 8px' }}>
+            {typingUsers.length === 1 ? 'écrit…' : `${typingUsers.length} personnes écrivent…`}
+          </div>
+        )}
+      </div>
 
-      <button type="button" className="btn btn-ghost btn-icon" onClick={() => fileInputRef.current?.click()} title="Joindre un fichier">
-        <Paperclip size={20} />
-      </button>
-      <input ref={fileInputRef} type="file" hidden onChange={handleFile} />
-
-      <input
-        className="field"
-        placeholder="Écrivez un message…"
-        value={text}
-        onChange={(e) => handleChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-      />
-
-      <button type="button" className="btn btn-primary" onClick={handleSend} disabled={disabled || !text.trim()}>
-        <Send size={16} />
-      </button>
+      <MessageInput onSend={onSendText} onSendFile={onSendFile} onTyping={onTyping} />
     </div>
   );
-      }
+}
