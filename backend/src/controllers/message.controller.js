@@ -1,5 +1,6 @@
  const { Conversation, ConversationMember, Message, User } = require('../models');
 const { sanitize } = require('./auth.controller');
+const uploadFile = require('../utils/uploadFile');
 
 async function assertMember(conversationId, userId) {
   return ConversationMember.findOne({ where: { conversationId, userId } });
@@ -25,7 +26,7 @@ async function sendMessage(req, res) {
         : req.file.mimetype.startsWith('audio/')
         ? 'audio'
         : 'files';
-      fileUrl = `/uploads/${folder}/${req.file.filename}`;
+      fileUrl = await uploadFile(req.file, folder);
       fileName = req.file.originalname;
       if (!type || type === 'text') {
         type = folder === 'audio' ? 'audio' : folder === 'images' ? 'image' : folder === 'videos' ? 'video' : 'file';
