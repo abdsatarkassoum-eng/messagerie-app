@@ -1,5 +1,6 @@
-const { Conversation, ConversationMember, User } = require('../models');
+ const { Conversation, ConversationMember, User } = require('../models');
 const { sanitize } = require('./auth.controller');
+const uploadFile = require('../utils/uploadFile');
 
 // POST /api/groups { name, memberIds: [] }
 async function createGroup(req, res) {
@@ -9,7 +10,7 @@ async function createGroup(req, res) {
       return res.status(400).json({ message: 'Le nom du groupe est requis.' });
     }
 
-    const avatarUrl = req.file ? `/uploads/images/${req.file.filename}` : null;
+    const avatarUrl = req.file ? await uploadFile(req.file, 'images') : null;
 
     const group = await Conversation.create({
       isGroup: true,
@@ -120,7 +121,7 @@ async function updateGroup(req, res) {
     if (!group) return res.status(404).json({ message: 'Groupe introuvable.' });
 
     if (req.body.name) group.name = req.body.name.trim();
-    if (req.file) group.avatarUrl = `/uploads/images/${req.file.filename}`;
+    if (req.file) group.avatarUrl = await uploadFile(req.file, 'images');
     await group.save();
 
     return res.json({ message: 'Groupe mis à jour.' });
