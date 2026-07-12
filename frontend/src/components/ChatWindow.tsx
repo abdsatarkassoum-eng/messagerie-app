@@ -4,6 +4,7 @@ import { ConversationSummary, Message } from '../types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import { resolveFileUrl } from '../utils/url';
+import { ArrowLeft, Phone, Video } from 'lucide-react';
 
 interface Props {
   conversation: ConversationSummary;
@@ -43,7 +44,7 @@ export default function ChatWindow({
       <div className="chat-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onBack && (
-            <button className="btn btn-ghost btn-icon" onClick={onBack}>←</button>
+            <button className="btn btn-ghost btn-icon" onClick={onBack}><ArrowLeft size={18} /></button>
           )}
           <div className="avatar" style={{ width: 40, height: 40 }}>
             {conversation.avatarUrl ? (
@@ -64,8 +65,8 @@ export default function ChatWindow({
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-ghost btn-icon" title="Appel audio" onClick={() => onStartCall('audio')}>📞</button>
-          <button className="btn btn-ghost btn-icon" title="Appel vidéo" onClick={() => onStartCall('video')}>🎥</button>
+          <button className="btn btn-ghost btn-icon" title="Appel audio" onClick={() => onStartCall('audio')}><Phone size={18} /></button>
+          <button className="btn btn-ghost btn-icon" title="Appel vidéo" onClick={() => onStartCall('video')}><Video size={18} /></button>
         </div>
       </div>
 
@@ -92,4 +93,4 @@ export default function ChatWindow({
       <MessageInput onSend={onSendText} onSendFile={onSendFile} onTyping={onTyping} />
     </div>
   );
-}
+              }
