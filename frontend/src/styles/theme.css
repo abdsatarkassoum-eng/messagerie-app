@@ -1,4 +1,4 @@
- /* ===================================================================
+/* ===================================================================
    Design system — palette "Ardoise & Sarcelle"
    Display : Space Grotesk / Body : Inter / Mono (heures) : JetBrains Mono
    =================================================================== */
@@ -16,6 +16,12 @@
   --accent-soft: #dcf1ec;
   --coral: #ff6b4a;
   --coral-soft: #ffe4dc;
+  --amber: #f5a623;
+  --amber-soft: #fef1d9;
+  --pink: #ef476f;
+  --pink-soft: #fde2e8;
+  --violet: #7c5cff;
+  --violet-soft: #ece6ff;
   --bubble-mine: #1f7a6c;
   --bubble-mine-text: #ffffff;
   --bubble-theirs: #ffffff;
@@ -40,6 +46,12 @@
   --accent-soft: #143630;
   --coral: #ff8163;
   --coral-soft: #3a241d;
+  --amber: #ffc659;
+  --amber-soft: #3a2e12;
+  --pink: #ff6f95;
+  --pink-soft: #3a1c26;
+  --violet: #a394ff;
+  --violet-soft: #241f3a;
   --bubble-mine: #22665a;
   --bubble-mine-text: #f2fbf9;
   --bubble-theirs: #1c262b;
@@ -187,9 +199,124 @@ input, textarea, select {
 }
 
 /* ---------- Layout principal ---------- */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.topnav {
+  height: 58px;
+  min-height: 58px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  z-index: 30;
+}
+.topnav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+.topnav-logo:hover { background: var(--bg-sunken); }
+.topnav-logo:active { transform: scale(0.97); }
+.topnav-logo-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--violet), var(--pink) 55%, var(--amber));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.topnav-logo-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  background: linear-gradient(90deg, var(--violet), var(--pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.topnav-actions { display: flex; align-items: center; gap: 6px; }
+.topnav-icon-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-sunken);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.topnav-icon-btn:hover { background: var(--accent-soft); color: var(--accent-strong); }
+.topnav-icon-btn:active { transform: scale(0.92); }
+.topnav-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--pink);
+  border: 2px solid var(--bg-elevated);
+  animation: badgePulse 1.8s ease-in-out infinite;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 52px;
+  right: 0;
+  width: 280px;
+  max-height: 420px;
+  overflow-y: auto;
+  z-index: 40;
+  animation: modalIn 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: background 0.12s ease;
+}
+.dropdown-item:hover { background: var(--bg-sunken); }
+.dropdown-title {
+  padding: 10px 14px 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.avatar-ring {
+  padding: 2px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--violet), var(--pink), var(--amber));
+}
+
 .app-shell {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - 58px);
   overflow: hidden;
 }
 
@@ -210,7 +337,7 @@ input, textarea, select {
   justify-content: space-between;
 }
 
- .conversation-item {
+.conversation-item {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -218,7 +345,7 @@ input, textarea, select {
   cursor: pointer;
   border-left: 3px solid transparent;
   border-bottom: 1px solid var(--border);
- }
+}
 .conversation-item:hover { background: var(--bg-sunken); }
 .conversation-item.active {
   background: var(--accent-soft);
