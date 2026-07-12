@@ -2,6 +2,7 @@
 const { Op, Sequelize } = require('sequelize');
 const { User } = require('../models');
 const { sanitize } = require('./auth.controller');
+const uploadFile = require('../utils/uploadFile');
 
 // GET /api/users/search?q=
 async function searchUsers(req, res) {
@@ -64,7 +65,7 @@ async function updateProfile(req, res) {
     }
 
     if (req.file) {
-      user.avatarUrl = `/uploads/avatars/${req.file.filename}`;
+      user.avatarUrl = await uploadFile(req.file, 'avatars');
     }
 
     await user.save();
