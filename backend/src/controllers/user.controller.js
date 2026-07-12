@@ -1,8 +1,31 @@
  const bcrypt = require('bcryptjs');
 const { Op, Sequelize } = require('sequelize');
-const { User } = require('../models');
+const { User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
+
+// GET /api/users/suggestions/list — personnes que vous ne suivez pas encore
+async function getSuggestions(req, res) {
+  try {
+    const userId = req.user.id;
+    const friendships = await Friendship.findAll({
+      where: { [Op.or]: [{ userAId: userId }, { userBId: userId }] },
+    });
+    const friendIds = friendships.map((f) => (f.userAId === userId ? f.userBId : f.userAId));
+    const excludeIds = [userId, ...friendIds];
+
+    const users = await User.findAll({
+      where: { id: { [Op.notIn]: excludeIds } },
+      order: [['createdAt', 'DESC']],
+      limit: 10,
+    });
+
+    return res.json({ users: users.map(sanitize) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération des suggestions.' });
+  }
+}
 
 // GET /api/users/search?q=
 async function searchUsers(req, res) {
@@ -76,4 +99,4 @@ async function updateProfile(req, res) {
   }
 }
 
-module.exports = { searchUsers, getUser, updateProfile };
+module.exports = { searchUsers, getUser, updateProfile, getSuggestions };
