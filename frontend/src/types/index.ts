@@ -85,3 +85,23 @@ export interface StatusGroup {
   statuses: StatusItem[];
   hasUnseen: boolean;
 }
+
+export interface PostComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: UserProfile;
+}
+
+export interface PostItem {
+  id: string;
+  author: UserProfile;
+  content: string | null;
+  fileUrl: string | null;
+  type: 'text' | 'image' | 'video';
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+  likedByMe: boolean;
+  isMine: boolean;
+}
