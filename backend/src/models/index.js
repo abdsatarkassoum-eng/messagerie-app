@@ -1,4 +1,4 @@
-const sequelize = require('../config/database');
+ const sequelize = require('../config/database');
 const User = require('./User');
 const FriendRequest = require('./FriendRequest');
 const Friendship = require('./Friendship');
@@ -7,6 +7,11 @@ const ConversationMember = require('./ConversationMember');
 const Message = require('./Message');
 const Invitation = require('./Invitation');
 const JoinRequest = require('./JoinRequest');
+const Status = require('./Status');
+const StatusView = require('./StatusView');
+const Post = require('./Post');
+const PostLike = require('./PostLike');
+const PostComment = require('./PostComment');
 
 // --- Associations ---
 
@@ -31,6 +36,18 @@ User.hasMany(FriendRequest, { foreignKey: 'receiverId', as: 'receivedFriendReque
 User.hasMany(Invitation, { foreignKey: 'createdBy', as: 'invitations' });
 Invitation.hasMany(JoinRequest, { foreignKey: 'invitationId', as: 'joinRequests' });
 
+// Statuts
+User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
+Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
+Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
+
+// Publications (fil d'actualité)
+User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
+Post.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+Post.hasMany(PostLike, { foreignKey: 'postId', as: 'likes' });
+Post.hasMany(PostComment, { foreignKey: 'postId', as: 'comments' });
+PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+
 async function syncDatabase() {
   await sequelize.sync();
 }
@@ -45,5 +62,10 @@ module.exports = {
   Message,
   Invitation,
   JoinRequest,
+  Status,
+  StatusView,
+  Post,
+  PostLike,
+  PostComment,
   syncDatabase,
 };
