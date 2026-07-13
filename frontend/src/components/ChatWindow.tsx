@@ -1,4 +1,4 @@
- import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ConversationSummary, Message } from '../types';
 import MessageBubble from './MessageBubble';
@@ -84,8 +84,10 @@ export default function ChatWindow({
           return <MessageBubble key={m.id} message={m} isMine={isMine} showSender={showSender} />;
         })}
         {typingUsers.length > 0 && (
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '4px 8px' }}>
-            {typingUsers.length === 1 ? 'écrit…' : `${typingUsers.length} personnes écrivent…`}
+          <div className="typing-indicator">
+            <span className="typing-dot" />
+            <span className="typing-dot" />
+            <span className="typing-dot" />
           </div>
         )}
       </div>
