@@ -9,6 +9,9 @@ const Invitation = require('./Invitation');
 const JoinRequest = require('./JoinRequest');
 const Status = require('./Status');
 const StatusView = require('./StatusView');
+const Post = require('./Post');
+const PostLike = require('./PostLike');
+const PostComment = require('./PostComment');
 
 // --- Associations ---
 
@@ -38,11 +41,18 @@ User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
 Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
 
-  async function syncDatabase() {
+// Publications (fil d'actualité)
+User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
+Post.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+Post.hasMany(PostLike, { foreignKey: 'postId', as: 'likes' });
+Post.hasMany(PostComment, { foreignKey: 'postId', as: 'comments' });
+PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
+
+async function syncDatabase() {
   await sequelize.sync();
 
-  // Ajout fiable des colonnes récentes sur une base PostgreSQL déjà existante
-  // (en local avec SQLite, sync() crée déjà les colonnes correctement).
+  console.log(`ℹ️  Dialecte de base de données détecté : ${sequelize.getDialect()}`);
+
   if (sequelize.getDialect() === 'postgres') {
     const migrations = [
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT 'default'`,
@@ -53,12 +63,13 @@ Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
     for (const query of migrations) {
       try {
         await sequelize.query(query);
+        console.log(`✅ Migration exécutée : ${query}`);
       } catch (err) {
-        console.error('⚠️  Avertissement de migration :', err.message);
+        console.error(`⚠️  Avertissement de migration (${query}) :`, err.message);
       }
     }
   }
-  }
+}
 
 module.exports = {
   sequelize,
@@ -72,5 +83,8 @@ module.exports = {
   JoinRequest,
   Status,
   StatusView,
+  Post,
+  PostLike,
+  PostComment,
   syncDatabase,
 };
