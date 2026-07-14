@@ -38,9 +38,9 @@ User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
 Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
 
-async function syncDatabase() {
-  await sequelize.sync();
-}
+ async function syncDatabase() {
+  await sequelize.sync({ alter: true });
+ }
 
 module.exports = {
   sequelize,
