@@ -52,8 +52,8 @@ const User = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: 'default',
     },
-    profileVisibility: {
-      type: DataTypes.ENUM('everyone', 'friends'),
+     profileVisibility: {
+      type: DataTypes.STRING,
       defaultValue: 'everyone',
     },
     mediaAutoDownload: {
