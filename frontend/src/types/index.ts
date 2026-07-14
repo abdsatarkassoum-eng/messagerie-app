@@ -8,6 +8,9 @@
   lastSeen: string;
   isAdmin: boolean;
   createdAt?: string;
+  wallpaper?: string;
+  profileVisibility?: 'everyone' | 'friends';
+  mediaAutoDownload?: boolean;
 }
 
 export interface ConversationSummary {
