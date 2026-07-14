@@ -38,9 +38,27 @@ User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
 Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
 
- async function syncDatabase() {
-  await sequelize.sync({ alter: true });
- }
+  async function syncDatabase() {
+  await sequelize.sync();
+
+  // Ajout fiable des colonnes récentes sur une base PostgreSQL déjà existante
+  // (en local avec SQLite, sync() crée déjà les colonnes correctement).
+  if (sequelize.getDialect() === 'postgres') {
+    const migrations = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT 'default'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT 'everyone'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true`,
+    ];
+
+    for (const query of migrations) {
+      try {
+        await sequelize.query(query);
+      } catch (err) {
+        console.error('⚠️  Avertissement de migration :', err.message);
+      }
+    }
+  }
+  }
 
 module.exports = {
   sequelize,
