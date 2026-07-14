@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const User = sequelize.define(
@@ -45,6 +45,18 @@ const User = sequelize.define(
       defaultValue: false,
     },
     isActive: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
+    wallpaper: {
+      type: DataTypes.STRING,
+      defaultValue: 'default',
+    },
+    profileVisibility: {
+      type: DataTypes.ENUM('everyone', 'friends'),
+      defaultValue: 'everyone',
+    },
+    mediaAutoDownload: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
