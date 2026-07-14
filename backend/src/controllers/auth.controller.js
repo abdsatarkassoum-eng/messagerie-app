@@ -133,8 +133,8 @@ async function logout(req, res) {
 }
 
 function sanitize(user) {
-  const { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt } = user;
-  return { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt };
+  const { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt, wallpaper, profileVisibility, mediaAutoDownload } = user;
+  return { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt, wallpaper, profileVisibility, mediaAutoDownload };
 }
 
 module.exports = { register, login, me, logout, sanitize };
