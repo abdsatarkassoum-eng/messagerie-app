@@ -1,4 +1,4 @@
- const sequelize = require('../config/database');
+const sequelize = require('../config/database');
 const User = require('./User');
 const FriendRequest = require('./FriendRequest');
 const Friendship = require('./Friendship');
