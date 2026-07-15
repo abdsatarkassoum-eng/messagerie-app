@@ -51,24 +51,26 @@ PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 async function syncDatabase() {
   await sequelize.sync();
 
-  console.log(`ℹ️  Dialecte de base de données détecté : ${sequelize.getDialect()}`);
+  console.log('MIGRATION_CHECK_START dialect=' + sequelize.getDialect());
 
   if (sequelize.getDialect() === 'postgres') {
     const migrations = [
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT 'default'`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT 'everyone'`,
-      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true`,
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT \'default\'',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT \'everyone\'',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true',
     ];
 
     for (const query of migrations) {
       try {
         await sequelize.query(query);
-        console.log(`✅ Migration exécutée : ${query}`);
+        console.log('MIGRATION_OK: ' + query);
       } catch (err) {
-        console.error(`⚠️  Avertissement de migration (${query}) :`, err.message);
+        console.log('MIGRATION_FAILED: ' + query + ' -- ' + err.message);
       }
     }
   }
+
+  console.log('MIGRATION_CHECK_END');
 }
 
 module.exports = {
