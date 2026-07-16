@@ -108,3 +108,21 @@ export interface PostItem {
   likedByMe: boolean;
   isMine: boolean;
 }
+
+export interface ProfileGroup {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  memberCount: number;
+  createdByThisUser: boolean;
+  viewerIsMember: boolean;
+}
+
+export interface FullProfile {
+  user: UserProfile;
+  relationship: 'self' | 'friends' | 'pending_sent' | 'pending_received' | 'none';
+  friendCount: number;
+  groups: ProfileGroup[];
+  canViewPosts: boolean;
+  posts: PostItem[];
+}
