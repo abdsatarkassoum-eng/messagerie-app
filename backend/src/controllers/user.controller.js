@@ -1,8 +1,9 @@
  const bcrypt = require('bcryptjs');
 const { Op, Sequelize } = require('sequelize');
-const { User, Friendship } = require('../models');
+const { User, Friendship, FriendRequest, Conversation, ConversationMember, Post } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
+const { enrichPost } = require('./post.controller');
 
 async function getFriendIdsFor(userId) {
   const friendships = await Friendship.findAll({
@@ -130,4 +131,74 @@ async function updateProfile(req, res) {
   }
 }
 
-module.exports = { searchUsers, getUser, updateProfile, getSuggestions };
+// GET /api/users/:id/profile — profil public complet (bio, amis, groupes, publications)
+async function getUserProfile(req, res) {
+  try {
+    const target = await User.findByPk(req.params.id);
+    if (!target) return res.status(404).json({ message: 'Utilisateur introuvable.' });
+
+    const viewerId = req.user.id;
+    const isSelf = target.id === viewerId;
+    const viewerFriendIds = await getFriendIdsFor(viewerId);
+    const isFriend = viewerFriendIds.includes(target.id);
+
+    let relationship = 'none';
+    if (isSelf) relationship = 'self';
+    else if (isFriend) relationship = 'friends';
+    else {
+      const pending = await FriendRequest.findOne({
+        where: {
+          status: 'pending',
+          [Op.or]: [
+            { senderId: viewerId, receiverId: target.id },
+            { senderId: target.id, receiverId: viewerId },
+          ],
+        },
+      });
+      if (pending) {
+        relationship = pending.senderId === viewerId ? 'pending_sent' : 'pending_received';
+      }
+    }
+
+    const targetFriendIds = await getFriendIdsFor(target.id);
+    const friendCount = targetFriendIds.length;
+
+    // Groupes dont cette personne est membre
+    const memberships = await ConversationMember.findAll({ where: { userId: target.id } });
+    const conversations = await Conversation.findAll({
+      where: { id: memberships.map((m) => m.conversationId), isGroup: true },
+    });
+    const groups = await Promise.all(
+      conversations.map(async (c) => ({
+        id: c.id,
+        name: c.name,
+        avatarUrl: c.avatarUrl,
+        memberCount: await ConversationMember.count({ where: { conversationId: c.id } }),
+        createdByThisUser: c.createdBy === target.id,
+        viewerIsMember: memberships.some((m) => m.conversationId === c.id) || (await ConversationMember.findOne({ where: { conversationId: c.id, userId: viewerId } })) !== null,
+      }))
+    );
+
+    const canViewPosts = isSelf || isFriend;
+    let posts = [];
+    if (canViewPosts) {
+      const rawPosts = await Post.findAll({ where: { userId: target.id }, order: [['createdAt', 'DESC']], limit: 30 });
+      const authorsMap = { [target.id]: applyPrivacy(target, isFriend) };
+      posts = await Promise.all(rawPosts.map((p) => enrichPost(p, viewerId, authorsMap)));
+    }
+
+    return res.json({
+      user: applyPrivacy(target, isFriend),
+      relationship,
+      friendCount,
+      groups,
+      canViewPosts,
+      posts,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération du profil.' });
+  }
+}
+
+module.exports = { searchUsers, getUser, updateProfile, getSuggestions, getUserProfile };
