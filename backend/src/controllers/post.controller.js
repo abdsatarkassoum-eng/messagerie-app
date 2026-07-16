@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+ const { Op } = require('sequelize');
 const { Post, PostLike, PostComment, User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
@@ -180,4 +180,4 @@ async function addComment(req, res) {
   }
 }
 
-module.exports = { createPost, listFeed, deletePost, toggleLike, listComments, addComment };
+module.exports = { createPost, listFeed, deletePost, toggleLike, listComments, addComment, enrichPost };
