@@ -81,6 +81,9 @@ export interface StatusItem {
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
+  likesCount: number;
+  commentsCount: number;
+  likedByMe: boolean;
 }
 
 export interface StatusGroup {
