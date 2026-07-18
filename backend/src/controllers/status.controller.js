@@ -1,5 +1,5 @@
  const { Op } = require('sequelize');
-const { Status, StatusView, User, Friendship } = require('../models');
+const { Status, StatusView, StatusLike, StatusComment, User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
 
@@ -72,6 +72,20 @@ async function listStatuses(req, res) {
     });
     const viewedSet = new Set(views.map((v) => v.statusId));
 
+    const likes = await StatusLike.findAll({ where: { statusId: statuses.map((s) => s.id) } });
+    const likesCountMap = {};
+    const likedByMeSet = new Set();
+    likes.forEach((l) => {
+      likesCountMap[l.statusId] = (likesCountMap[l.statusId] || 0) + 1;
+      if (l.userId === userId) likedByMeSet.add(l.statusId);
+    });
+
+    const commentsCountRows = await StatusComment.findAll({ where: { statusId: statuses.map((s) => s.id) } });
+    const commentsCountMap = {};
+    commentsCountRows.forEach((c) => {
+      commentsCountMap[c.statusId] = (commentsCountMap[c.statusId] || 0) + 1;
+    });
+
     const groupsMap = {};
     for (const s of statuses) {
       if (!groupsMap[s.userId]) {
@@ -89,6 +103,9 @@ async function listStatuses(req, res) {
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
         viewed,
+        likesCount: likesCountMap[s.id] || 0,
+        commentsCount: commentsCountMap[s.id] || 0,
+        likedByMe: likedByMeSet.has(s.id),
       });
     }
 
@@ -160,6 +177,8 @@ async function deleteStatus(req, res) {
     }
 
     await StatusView.destroy({ where: { statusId: status.id } });
+    await StatusLike.destroy({ where: { statusId: status.id } });
+    await StatusComment.destroy({ where: { statusId: status.id } });
     await status.destroy();
 
     return res.json({ message: 'Statut supprimé.' });
@@ -168,4 +187,101 @@ async function deleteStatus(req, res) {
   }
 }
 
-module.exports = { createStatus, listStatuses, viewStatus, getViewers, deleteStatus };
+// POST /api/statuses/:id/like — bascule j'aime / je n'aime plus
+async function toggleStatusLike(req, res) {
+  try {
+    const status = await Status.findByPk(req.params.id);
+    if (!status) return res.status(404).json({ message: 'Statut introuvable.' });
+
+    const existing = await StatusLike.findOne({ where: { statusId: status.id, userId: req.user.id } });
+    if (existing) {
+      await existing.destroy();
+      return res.json({ liked: false });
+    }
+
+    await StatusLike.create({ statusId: status.id, userId: req.user.id });
+
+    if (status.userId !== req.user.id) {
+      req.app.get('io')?.to(`user:${status.userId}`).emit('status:liked', {
+        statusId: status.id,
+        by: sanitize(req.user),
+      });
+    }
+
+    return res.json({ liked: true });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur serveur.' });
+  }
+}
+
+// GET /api/statuses/:id/comments
+async function listStatusComments(req, res) {
+  try {
+    const comments = await StatusComment.findAll({
+      where: { statusId: req.params.id },
+      order: [['createdAt', 'ASC']],
+    });
+
+    const authorIds = [...new Set(comments.map((c) => c.userId))];
+    const authors = await User.findAll({ where: { id: authorIds } });
+    const authorsMap = Object.fromEntries(authors.map((a) => [a.id, sanitize(a)]));
+
+    return res.json({
+      comments: comments.map((c) => ({
+        id: c.id,
+        content: c.content,
+        createdAt: c.createdAt,
+        author: authorsMap[c.userId],
+      })),
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Erreur lors de la récupération des commentaires.' });
+  }
+}
+
+// POST /api/statuses/:id/comments { content }
+async function addStatusComment(req, res) {
+  try {
+    const { content } = req.body;
+    if (!content?.trim()) return res.status(400).json({ message: 'Le commentaire ne peut pas être vide.' });
+
+    const status = await Status.findByPk(req.params.id);
+    if (!status) return res.status(404).json({ message: 'Statut introuvable.' });
+
+    const comment = await StatusComment.create({
+      statusId: status.id,
+      userId: req.user.id,
+      content: content.trim(),
+    });
+
+    if (status.userId !== req.user.id) {
+      req.app.get('io')?.to(`user:${status.userId}`).emit('status:commented', {
+        statusId: status.id,
+        by: sanitize(req.user),
+      });
+    }
+
+    return res.status(201).json({
+      comment: {
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        author: sanitize(req.user),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Erreur lors de l'ajout du commentaire." });
+  }
+}
+
+module.exports = {
+  createStatus,
+  listStatuses,
+  viewStatus,
+  getViewers,
+  deleteStatus,
+  toggleStatusLike,
+  listStatusComments,
+  addStatusComment,
+};
