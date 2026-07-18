@@ -1,4 +1,4 @@
-const sequelize = require('../config/database');
+ const sequelize = require('../config/database');
 const User = require('./User');
 const FriendRequest = require('./FriendRequest');
 const Friendship = require('./Friendship');
@@ -12,6 +12,7 @@ const StatusView = require('./StatusView');
 const Post = require('./Post');
 const PostLike = require('./PostLike');
 const PostComment = require('./PostComment');
+const CatalogItem = require('./CatalogItem');
 
 // --- Associations ---
 
@@ -48,29 +49,31 @@ Post.hasMany(PostLike, { foreignKey: 'postId', as: 'likes' });
 Post.hasMany(PostComment, { foreignKey: 'postId', as: 'comments' });
 PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 
+// Catalogue (produits/services)
+User.hasMany(CatalogItem, { foreignKey: 'userId', as: 'catalogItems' });
+CatalogItem.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
+
 async function syncDatabase() {
   await sequelize.sync();
 
-  console.log('MIGRATION_CHECK_START dialect=' + sequelize.getDialect());
+  console.log(`ℹ️  Dialecte de base de données détecté : ${sequelize.getDialect()}`);
 
   if (sequelize.getDialect() === 'postgres') {
     const migrations = [
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT \'default\'',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT \'everyone\'',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true',
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT 'default'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT 'everyone'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true`,
     ];
 
     for (const query of migrations) {
       try {
         await sequelize.query(query);
-        console.log('MIGRATION_OK: ' + query);
+        console.log(`✅ Migration exécutée : ${query}`);
       } catch (err) {
-        console.log('MIGRATION_FAILED: ' + query + ' -- ' + err.message);
+        console.error(`⚠️  Avertissement de migration (${query}) :`, err.message);
       }
     }
   }
-
-  console.log('MIGRATION_CHECK_END');
 }
 
 module.exports = {
@@ -88,5 +91,6 @@ module.exports = {
   Post,
   PostLike,
   PostComment,
+  CatalogItem,
   syncDatabase,
 };
