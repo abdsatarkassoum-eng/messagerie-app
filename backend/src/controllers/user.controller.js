@@ -12,35 +12,12 @@ async function getFriendIdsFor(userId) {
   return friendships.map((f) => (f.userAId === userId ? f.userBId : f.userAId));
 }
 
-// Masque la photo de profil si la personne l'a restreinte aux amis
-// et que le demandeur n'est pas (encore) son ami.
 function applyPrivacy(candidate, isFriend) {
-  const result = sanitize(candidate);
-  if (result.profileVisibility === 'friends' && !isFriend) {
-    result.avatarUrl = null;
+  const base = sanitize(candidate);
+  if (base.profileVisibility === 'friends' && !isFriend) {
+    return { ...base, avatarUrl: null };
   }
-  return result;
-}
-
-// GET /api/users/suggestions/list — personnes que vous ne suivez pas encore
-async function getSuggestions(req, res) {
-  try {
-    const userId = req.user.id;
-    const friendIds = await getFriendIdsFor(userId);
-    const excludeIds = [userId, ...friendIds];
-
-    const users = await User.findAll({
-      where: { id: { [Op.notIn]: excludeIds } },
-      order: [['createdAt', 'DESC']],
-      limit: 10,
-    });
-
-    // Toutes les suggestions sont, par construction, des personnes qui ne sont pas amies
-    return res.json({ users: users.map((u) => applyPrivacy(u, false)) });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: 'Erreur lors de la récupération des suggestions.' });
-  }
+  return base;
 }
 
 // GET /api/users/search?q=
@@ -48,8 +25,6 @@ async function searchUsers(req, res) {
   try {
     const q = (req.query.q || '').trim().toLowerCase();
     if (!q) return res.json({ users: [] });
-
-    const friendIds = await getFriendIdsFor(req.user.id);
 
     const users = await User.findAll({
       where: {
@@ -66,12 +41,30 @@ async function searchUsers(req, res) {
       limit: 20,
     });
 
-    return res.json({
-      users: users.map((u) => applyPrivacy(u, friendIds.includes(u.id))),
-    });
+    return res.json({ users: users.map((u) => applyPrivacy(u, false)) });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Erreur lors de la recherche.' });
+  }
+}
+
+// GET /api/users/suggestions/list
+async function getSuggestions(req, res) {
+  try {
+    const userId = req.user.id;
+    const friendIds = await getFriendIdsFor(userId);
+    const excludeIds = [userId, ...friendIds];
+
+    const users = await User.findAll({
+      where: { id: { [Op.notIn]: excludeIds } },
+      order: [['createdAt', 'DESC']],
+      limit: 10,
+    });
+
+    return res.json({ users: users.map((u) => applyPrivacy(u, false)) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération des suggestions.' });
   }
 }
 
@@ -80,7 +73,6 @@ async function getUser(req, res) {
   try {
     const user = await User.findByPk(req.params.id);
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable.' });
-
     const friendIds = await getFriendIdsFor(req.user.id);
     return res.json({ user: applyPrivacy(user, friendIds.includes(user.id)) });
   } catch (err) {
@@ -163,7 +155,6 @@ async function getUserProfile(req, res) {
     const targetFriendIds = await getFriendIdsFor(target.id);
     const friendCount = targetFriendIds.length;
 
-    // Groupes dont cette personne est membre
     const memberships = await ConversationMember.findAll({ where: { userId: target.id } });
     const conversations = await Conversation.findAll({
       where: { id: memberships.map((m) => m.conversationId), isGroup: true },
@@ -175,7 +166,7 @@ async function getUserProfile(req, res) {
         avatarUrl: c.avatarUrl,
         memberCount: await ConversationMember.count({ where: { conversationId: c.id } }),
         createdByThisUser: c.createdBy === target.id,
-        viewerIsMember: memberships.some((m) => m.conversationId === c.id) || (await ConversationMember.findOne({ where: { conversationId: c.id, userId: viewerId } })) !== null,
+        viewerIsMember: (await ConversationMember.findOne({ where: { conversationId: c.id, userId: viewerId } })) !== null,
       }))
     );
 
@@ -201,4 +192,24 @@ async function getUserProfile(req, res) {
   }
 }
 
-module.exports = { searchUsers, getUser, updateProfile, getSuggestions, getUserProfile };
+// GET /api/users/:id/friends-list — liste d'amis publique d'un profil
+async function getUserFriendsList(req, res) {
+  try {
+    const targetId = req.params.id;
+    const friendIds = await getFriendIdsFor(targetId);
+    const friends = await User.findAll({ where: { id: friendIds } });
+    return res.json({ friends: friends.map((f) => applyPrivacy(f, false)) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération des amis.' });
+  }
+}
+
+module.exports = {
+  searchUsers,
+  getUser,
+  updateProfile,
+  getSuggestions,
+  getUserProfile,
+  getUserFriendsList,
+};
