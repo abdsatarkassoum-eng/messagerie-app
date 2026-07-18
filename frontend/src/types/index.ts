@@ -118,6 +118,16 @@ export interface ProfileGroup {
   viewerIsMember: boolean;
 }
 
+export interface CatalogItem {
+  id: string;
+  type: 'product' | 'service';
+  name: string;
+  description: string | null;
+  price: string | null;
+  fileUrl: string | null;
+  createdAt: string;
+}
+
 export interface FullProfile {
   user: UserProfile;
   relationship: 'self' | 'friends' | 'pending_sent' | 'pending_received' | 'none';
