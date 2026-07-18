@@ -9,6 +9,8 @@ const Invitation = require('./Invitation');
 const JoinRequest = require('./JoinRequest');
 const Status = require('./Status');
 const StatusView = require('./StatusView');
+const StatusLike = require('./StatusLike');
+const StatusComment = require('./StatusComment');
 const Post = require('./Post');
 const PostLike = require('./PostLike');
 const PostComment = require('./PostComment');
@@ -41,6 +43,9 @@ Invitation.hasMany(JoinRequest, { foreignKey: 'invitationId', as: 'joinRequests'
 User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
 Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
+Status.hasMany(StatusLike, { foreignKey: 'statusId', as: 'likes' });
+Status.hasMany(StatusComment, { foreignKey: 'statusId', as: 'comments' });
+StatusComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 
 // Publications (fil d'actualité)
 User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
@@ -88,6 +93,8 @@ module.exports = {
   JoinRequest,
   Status,
   StatusView,
+  StatusLike,
+  StatusComment,
   Post,
   PostLike,
   PostComment,
