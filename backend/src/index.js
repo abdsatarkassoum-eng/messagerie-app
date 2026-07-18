@@ -19,6 +19,7 @@ const invitationRoutes = require('./routes/invitation.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const statusRoutes = require('./routes/status.routes');
 const postRoutes = require('./routes/post.routes');
+const catalogRoutes = require('./routes/catalog.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -47,6 +48,7 @@ app.use('/api/invitations', invitationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/statuses', statusRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 // Gestion des erreurs générique
 app.use((err, req, res, next) => {
