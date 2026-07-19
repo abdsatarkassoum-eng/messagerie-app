@@ -10,6 +10,7 @@ async function getFriendIds(userId) {
   return friendships.map((f) => (f.userAId === userId ? f.userBId : f.userAId));
 }
 
+// Enrichit UNE publication (utilisé seulement pour la création, un seul post à la fois)
 async function enrichPost(post, currentUserId, authorsMap) {
   const likesCount = await PostLike.count({ where: { postId: post.id } });
   const commentsCount = await PostComment.count({ where: { postId: post.id } });
@@ -27,6 +28,44 @@ async function enrichPost(post, currentUserId, authorsMap) {
     likedByMe,
     isMine: post.userId === currentUserId,
   };
+}
+
+// Enrichit PLUSIEURS publications en seulement 2 requêtes groupées au lieu de 3xN
+// (évite le problème de performance N+1 sur le fil d'actualité et les profils)
+async function enrichPostsBatch(posts, currentUserId, authorsMap) {
+  if (posts.length === 0) return [];
+
+  const postIds = posts.map((p) => p.id);
+
+  const [allLikes, allComments] = await Promise.all([
+    PostLike.findAll({ where: { postId: postIds } }),
+    PostComment.findAll({ where: { postId: postIds } }),
+  ]);
+
+  const likesCountMap = {};
+  const likedByMeSet = new Set();
+  allLikes.forEach((l) => {
+    likesCountMap[l.postId] = (likesCountMap[l.postId] || 0) + 1;
+    if (l.userId === currentUserId) likedByMeSet.add(l.postId);
+  });
+
+  const commentsCountMap = {};
+  allComments.forEach((c) => {
+    commentsCountMap[c.postId] = (commentsCountMap[c.postId] || 0) + 1;
+  });
+
+  return posts.map((post) => ({
+    id: post.id,
+    author: authorsMap[post.userId],
+    content: post.content,
+    fileUrl: post.fileUrl,
+    type: post.type,
+    createdAt: post.createdAt,
+    likesCount: likesCountMap[post.id] || 0,
+    commentsCount: commentsCountMap[post.id] || 0,
+    likedByMe: likedByMeSet.has(post.id),
+    isMine: post.userId === currentUserId,
+  }));
 }
 
 // POST /api/posts { content }
@@ -79,7 +118,7 @@ async function listFeed(req, res) {
     const authors = await User.findAll({ where: { id: relevantIds } });
     const authorsMap = Object.fromEntries(authors.map((a) => [a.id, sanitize(a)]));
 
-    const enriched = await Promise.all(posts.map((p) => enrichPost(p, userId, authorsMap)));
+    const enriched = await enrichPostsBatch(posts, userId, authorsMap);
 
     return res.json({ posts: enriched });
   } catch (err) {
@@ -180,4 +219,4 @@ async function addComment(req, res) {
   }
 }
 
-module.exports = { createPost, listFeed, deletePost, toggleLike, listComments, addComment, enrichPost };
+module.exports = { createPost, listFeed, deletePost, toggleLike, listComments, addComment, enrichPost, enrichPostsBatch };
