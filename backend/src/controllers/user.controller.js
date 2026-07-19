@@ -3,7 +3,7 @@ const { Op, Sequelize } = require('sequelize');
 const { User, Friendship, FriendRequest, Conversation, ConversationMember, Post } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
-const { enrichPost } = require('./post.controller');
+const { enrichPostsBatch } = require('./post.controller');
 
 async function getFriendIdsFor(userId) {
   const friendships = await Friendship.findAll({
@@ -156,26 +156,38 @@ async function getUserProfile(req, res) {
     const friendCount = targetFriendIds.length;
 
     const memberships = await ConversationMember.findAll({ where: { userId: target.id } });
+    const conversationIds = memberships.map((m) => m.conversationId);
     const conversations = await Conversation.findAll({
-      where: { id: memberships.map((m) => m.conversationId), isGroup: true },
+      where: { id: conversationIds, isGroup: true },
     });
-    const groups = await Promise.all(
-      conversations.map(async (c) => ({
-        id: c.id,
-        name: c.name,
-        avatarUrl: c.avatarUrl,
-        memberCount: await ConversationMember.count({ where: { conversationId: c.id } }),
-        createdByThisUser: c.createdBy === target.id,
-        viewerIsMember: (await ConversationMember.findOne({ where: { conversationId: c.id, userId: viewerId } })) !== null,
-      }))
-    );
+
+    // Une seule requête groupée pour tous les membres de tous ces groupes,
+    // au lieu de 2 requêtes séparées par groupe.
+    const allMembersOfTheseGroups = await ConversationMember.findAll({
+      where: { conversationId: conversations.map((c) => c.id) },
+    });
+    const memberCountMap = {};
+    const viewerMemberSet = new Set();
+    allMembersOfTheseGroups.forEach((m) => {
+      memberCountMap[m.conversationId] = (memberCountMap[m.conversationId] || 0) + 1;
+      if (m.userId === viewerId) viewerMemberSet.add(m.conversationId);
+    });
+
+    const groups = conversations.map((c) => ({
+      id: c.id,
+      name: c.name,
+      avatarUrl: c.avatarUrl,
+      memberCount: memberCountMap[c.id] || 0,
+      createdByThisUser: c.createdBy === target.id,
+      viewerIsMember: viewerMemberSet.has(c.id),
+    }));
 
     const canViewPosts = isSelf || isFriend;
     let posts = [];
     if (canViewPosts) {
       const rawPosts = await Post.findAll({ where: { userId: target.id }, order: [['createdAt', 'DESC']], limit: 30 });
       const authorsMap = { [target.id]: applyPrivacy(target, isFriend) };
-      posts = await Promise.all(rawPosts.map((p) => enrichPost(p, viewerId, authorsMap)));
+      posts = await enrichPostsBatch(rawPosts, viewerId, authorsMap);
     }
 
     return res.json({
