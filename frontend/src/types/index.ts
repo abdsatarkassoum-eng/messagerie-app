@@ -1,4 +1,4 @@
- export interface UserProfile {
+export interface UserProfile {
   id: string;
   username: string;
   email: string;
@@ -128,6 +128,7 @@ export interface CatalogItem {
   description: string | null;
   price: string | null;
   fileUrl: string | null;
+  images: string[];
   createdAt: string;
 }
 
