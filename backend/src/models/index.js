@@ -68,6 +68,7 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "wallpaper" VARCHAR(255) DEFAULT 'default'`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT 'everyone'`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true`,
+      `ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS "images" TEXT DEFAULT '[]'`,
     ];
 
     for (const query of migrations) {
