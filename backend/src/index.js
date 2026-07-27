@@ -1,4 +1,4 @@
- require('dotenv').config();
+require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -21,6 +21,7 @@ const paymentRoutes = require('./routes/payment.routes');
 const statusRoutes = require('./routes/status.routes');
 const postRoutes = require('./routes/post.routes');
 const catalogRoutes = require('./routes/catalog.routes');
+const pushRoutes = require('./routes/push.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -51,6 +52,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/statuses', statusRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/catalog', catalogRoutes);
+app.use('/api/push', pushRoutes);
 
 // Gestion des erreurs générique
 app.use((err, req, res, next) => {
