@@ -1,7 +1,8 @@
- const { Op } = require('sequelize');
+const { Op } = require('sequelize');
 const { Post, PostLike, PostComment, User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
+const { sendPushToUser } = require('../utils/webPush');
 
 async function getFriendIds(userId) {
   const friendships = await Friendship.findAll({
@@ -159,6 +160,15 @@ async function toggleLike(req, res) {
     }
 
     await PostLike.create({ postId: post.id, userId: req.user.id });
+
+    if (post.userId !== req.user.id) {
+      sendPushToUser(post.userId, {
+        title: 'Nouveau j\'aime',
+        body: `${req.user.username} a aimé votre publication.`,
+        url: '/feed',
+      }).catch(() => {});
+    }
+
     return res.json({ liked: true });
   } catch (err) {
     return res.status(500).json({ message: 'Erreur serveur.' });
@@ -204,6 +214,14 @@ async function addComment(req, res) {
       userId: req.user.id,
       content: content.trim(),
     });
+
+    if (post.userId !== req.user.id) {
+      sendPushToUser(post.userId, {
+        title: 'Nouveau commentaire',
+        body: `${req.user.username} : ${content.trim()}`,
+        url: '/feed',
+      }).catch(() => {});
+    }
 
     return res.status(201).json({
       comment: {
