@@ -31,3 +31,40 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(event.request))
   );
 });
+
+// Réception d'une notification push envoyée par le serveur
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+  let payload = {};
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: 'FriEnds', body: event.data.text() };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || 'FriEnds', {
+      body: payload.body || '',
+      icon: payload.icon || '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: payload.url || '/' },
+    })
+  );
+});
+
+// Appui sur la notification : ouvre (ou remet au premier plan) l'application
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsArr) => {
+      const existing = clientsArr.find((c) => 'focus' in c);
+      if (existing) {
+        existing.navigate(targetUrl);
+        return existing.focus();
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
