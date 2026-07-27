@@ -1,4 +1,4 @@
- const sequelize = require('../config/database');
+const sequelize = require('../config/database');
 const User = require('./User');
 const FriendRequest = require('./FriendRequest');
 const Friendship = require('./Friendship');
@@ -15,6 +15,7 @@ const Post = require('./Post');
 const PostLike = require('./PostLike');
 const PostComment = require('./PostComment');
 const CatalogItem = require('./CatalogItem');
+const PushSubscription = require('./PushSubscription');
 
 // --- Associations ---
 
@@ -58,6 +59,10 @@ PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 User.hasMany(CatalogItem, { foreignKey: 'userId', as: 'catalogItems' });
 CatalogItem.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
 
+// Abonnements aux notifications push
+User.hasMany(PushSubscription, { foreignKey: 'userId', as: 'pushSubscriptions' });
+PushSubscription.belongsTo(User, { foreignKey: 'userId' });
+
 async function syncDatabase() {
   await sequelize.sync();
 
@@ -100,5 +105,7 @@ module.exports = {
   PostLike,
   PostComment,
   CatalogItem,
+  PushSubscription,
   syncDatabase,
 };
+
