@@ -35,7 +35,7 @@ export async function setupPushNotifications() {
 
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(keyRes.data.publicKey),
+      applicationServerKey: urlBase64ToUint8Array(keyRes.data.publicKey) as BufferSource,
     });
 
     await api.post('/push/subscribe', subscription.toJSON());
