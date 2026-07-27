@@ -1,4 +1,4 @@
- {
+{
   "name": "messagerie-backend",
   "version": "1.0.0",
   "description": "Backend de l'application de messagerie (API REST + WebSocket)",
@@ -24,7 +24,8 @@
     "sequelize": "^6.37.3",
     "socket.io": "^4.7.5",
     "sqlite3": "^5.1.7",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
