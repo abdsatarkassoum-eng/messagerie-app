@@ -1,6 +1,7 @@
- const { Op } = require('sequelize');
+const { Op } = require('sequelize');
 const { FriendRequest, Friendship, User } = require('../models');
 const { sanitize } = require('./auth.controller');
+const { sendPushToUser } = require('../utils/webPush');
 
 function pairKey(a, b) {
   return [a, b].sort();
@@ -47,6 +48,12 @@ async function sendRequest(req, res) {
       sender: sanitize(req.user),
     });
 
+    sendPushToUser(receiverId, {
+      title: 'Nouvelle demande d\'ami',
+      body: `${req.user.username} veut devenir votre ami.`,
+      url: '/',
+    }).catch(() => {});
+
     return res.status(201).json({ message: 'Demande envoyée.', request });
   } catch (err) {
     console.error(err);
@@ -77,6 +84,12 @@ async function respondRequest(req, res) {
       req.app.get('io')?.to(`user:${request.senderId}`).emit('friend_request:accepted', {
         by: sanitize(req.user),
       });
+
+      sendPushToUser(request.senderId, {
+        title: 'Demande acceptée',
+        body: `${req.user.username} a accepté votre demande d'ami.`,
+        url: '/',
+      }).catch(() => {});
 
       return res.json({ message: 'Demande acceptée.' });
     } else if (action === 'reject') {
