@@ -1,6 +1,7 @@
- const { Conversation, ConversationMember, Message, User } = require('../models');
+const { Conversation, ConversationMember, Message, User } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
+const { sendPushToUser } = require('../utils/webPush');
 
 async function assertMember(conversationId, userId) {
   return ConversationMember.findOne({ where: { conversationId, userId } });
@@ -67,6 +68,21 @@ async function sendMessage(req, res) {
 
     // Diffuser en temps réel à tous les membres de la conversation
     req.app.get('io')?.to(`conversation:${conversationId}`).emit('message:new', payload);
+
+    // Notification push aux autres membres de la conversation
+    const otherMembers = await ConversationMember.findAll({
+      where: { conversationId },
+    });
+    const preview = message.type === 'text' ? message.content : '📎 Pièce jointe';
+    otherMembers
+      .filter((m) => m.userId !== req.user.id)
+      .forEach((m) => {
+        sendPushToUser(m.userId, {
+          title: conversation.isGroup ? `${req.user.username} (${conversation.name})` : req.user.username,
+          body: preview || 'Nouveau message',
+          url: '/',
+        }).catch(() => {});
+      });
 
     return res.status(201).json({ message: payload });
   } catch (err) {
