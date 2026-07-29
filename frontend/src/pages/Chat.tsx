@@ -1,4 +1,4 @@
- import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -157,10 +157,10 @@ export default function Chat() {
   };
 
   return (
-    <div className="app-root">
+    <div className="app-root" style={{ height: '100dvh' }}>
       <TopNav />
-      <div className="app-shell">
-        <div className={mobileShowChat ? 'sidebar hidden-mobile' : 'sidebar'}>
+      <div className="app-shell" style={{ height: 'calc(100dvh - 58px)', minHeight: 0 }}>
+        <div className={mobileShowChat ? 'sidebar hidden-mobile' : 'sidebar'} style={{ minHeight: 0 }}>
           <Sidebar
             conversations={conversations}
             activeConversationId={activeId}
@@ -173,7 +173,10 @@ export default function Chat() {
           />
         </div>
 
-        <div className={mobileShowChat ? 'chat-area' : 'chat-area hidden-mobile'} style={{ display: mobileShowChat || activeConversation ? 'flex' : undefined }}>
+        <div
+          className={mobileShowChat ? 'chat-area' : 'chat-area hidden-mobile'}
+          style={{ display: mobileShowChat || activeConversation ? 'flex' : undefined, minHeight: 0 }}
+        >
           {activeConversation ? (
             <ChatWindow
               conversation={activeConversation}
@@ -201,4 +204,4 @@ export default function Chat() {
       </div>
     </div>
   );
-  }
+       }
