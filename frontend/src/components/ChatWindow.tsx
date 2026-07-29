@@ -43,8 +43,8 @@ export default function ChatWindow({
   const isOnline = other ? onlineStatus[other.id] : false;
 
   return (
-    <div className="chat-area">
-      <div className="chat-header">
+    <div className="chat-area" style={{ minHeight: 0, height: '100%' }}>
+      <div className="chat-header" style={{ flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onBack && (
             <button className="btn btn-ghost btn-icon" onClick={onBack}><ArrowLeft size={18} /></button>
@@ -79,7 +79,11 @@ export default function ChatWindow({
         </div>
       </div>
 
-      <div className="messages-scroll" ref={scrollRef} style={wallpaperStyle(user?.wallpaper)}>
+      <div
+        className="messages-scroll"
+        ref={scrollRef}
+        style={{ ...wallpaperStyle(user?.wallpaper), minHeight: 0, flex: '1 1 0%', overflowY: 'auto' }}
+      >
         {messages.length === 0 && (
           <div className="empty-state">
             <div style={{ fontSize: '2rem' }}>💬</div>
