@@ -36,7 +36,7 @@ export default function Feed() {
   return (
     <div className="app-root">
       <TopNav />
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', height: 'calc(100dvh - 58px)' }}>
+      <div style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', height: 'calc(100dvh - 58px)', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <button className="btn btn-ghost" onClick={() => navigate('/')}>
             <ArrowLeft size={16} /> Retour aux discussions
