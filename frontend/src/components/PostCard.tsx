@@ -23,9 +23,6 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('fr-FR');
 }
 
-// Style partagé : une image/vidéo ne dépasse jamais son cadre horizontalement,
-// et sa hauteur est plafonnée pour garder un rendu équilibré (comme sur
-// Facebook/Instagram), qu'elle soit filmée en vertical ou en horizontal.
 const mediaStyle: React.CSSProperties = {
   width: '100%',
   maxWidth: '100%',
@@ -83,7 +80,19 @@ export default function PostCard({ post, onDeleted }: Props) {
   };
 
   return (
-    <div className="card" style={{ padding: 16, marginBottom: 16, overflow: 'hidden', boxSizing: 'border-box' }}>
+    <div
+      style={{
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border)',
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 16,
+        overflow: 'hidden',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <div
           className="avatar"
@@ -176,4 +185,4 @@ export default function PostCard({ post, onDeleted }: Props) {
       )}
     </div>
   );
-    }
+}
