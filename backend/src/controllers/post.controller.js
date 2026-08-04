@@ -103,20 +103,19 @@ async function createPost(req, res) {
   }
 }
 
-// GET /api/posts — publications de l'utilisateur et de ses amis
+// GET /api/posts — publications de TOUT LE MONDE (public), pour permettre
+// de découvrir des créateurs de contenu et de les ajouter en ami ensuite.
 async function listFeed(req, res) {
   try {
     const userId = req.user.id;
-    const friendIds = await getFriendIds(userId);
-    const relevantIds = [userId, ...friendIds];
 
     const posts = await Post.findAll({
-      where: { userId: relevantIds },
       order: [['createdAt', 'DESC']],
       limit: 50,
     });
 
-    const authors = await User.findAll({ where: { id: relevantIds } });
+    const authorIds = [...new Set(posts.map((p) => p.userId))];
+    const authors = await User.findAll({ where: { id: authorIds } });
     const authorsMap = Object.fromEntries(authors.map((a) => [a.id, sanitize(a)]));
 
     const enriched = await enrichPostsBatch(posts, userId, authorsMap);
