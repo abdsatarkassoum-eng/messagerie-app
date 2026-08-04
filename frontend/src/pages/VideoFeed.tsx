@@ -10,6 +10,8 @@ export default function VideoFeed() {
   const navigate = useNavigate();
   const [videos, setVideos] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
+  // État du son partagé par TOUTES les vidéos du feed (pas un état par vidéo)
+  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     api.get('/posts').then((res) => {
@@ -50,7 +52,7 @@ export default function VideoFeed() {
           }}
         >
           {videos.map((v) => (
-            <VideoSlide key={v.id} post={v} />
+            <VideoSlide key={v.id} post={v} muted={muted} onToggleMute={() => setMuted((m) => !m)} />
           ))}
         </div>
       )}
@@ -58,7 +60,15 @@ export default function VideoFeed() {
   );
 }
 
-function VideoSlide({ post }: { post: PostItem }) {
+function VideoSlide({
+  post,
+  muted,
+  onToggleMute,
+}: {
+  post: PostItem;
+  muted: boolean;
+  onToggleMute: () => void;
+}) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,10 +78,6 @@ function VideoSlide({ post }: { post: PostItem }) {
   const [comments, setComments] = useState<PostComment[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentText, setCommentText] = useState('');
-  // Correctif son : la vidéo démarre muette (requis par les navigateurs pour l'autoplay
-  // déclenché par IntersectionObserver, sans interaction utilisateur), mais l'utilisateur
-  // peut activer/couper le son via le bouton dédié.
-  const [muted, setMuted] = useState(true);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -178,7 +184,7 @@ function VideoSlide({ post }: { post: PostItem }) {
           <MessageCircle size={28} />
           <span style={{ fontSize: '0.74rem' }}>{post.commentsCount > 0 ? post.commentsCount : ''}</span>
         </button>
-        <button onClick={() => setMuted((m) => !m)} style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <button onClick={onToggleMute} style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           {muted ? <VolumeX size={28} /> : <Volume2 size={28} />}
         </button>
       </div>
@@ -229,4 +235,4 @@ function VideoSlide({ post }: { post: PostItem }) {
       )}
     </div>
   );
-          }
+}
