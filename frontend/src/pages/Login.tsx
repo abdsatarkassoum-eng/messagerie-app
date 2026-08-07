@@ -1,7 +1,7 @@
 import React, { useState, FormEvent } from "react";
 import Logo from "./Logo";
 import { GoogleIcon, AppleIcon } from "./SocialIcons";
-import { supabase } from "../lib/supabaseClient"; // ⚠️ adapte le chemin si ton client Supabase est ailleurs
+import api from "../services/api"; // ⚠️ adapte le chemin si Login.tsx n'est pas dans src/pages/
 import "./auth.css";
 
 export default function LoginPage() {
@@ -10,11 +10,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const [showForgot, setShowForgot] = useState<boolean>(false);
-  const [resetEmail, setResetEmail] = useState<string>("");
-  const [resetSent, setResetSent] = useState<boolean>(false);
-  const [resetError, setResetError] = useState<string>("");
-  const [resetLoading, setResetLoading] = useState<boolean>(false);
+  function goToSignup(e: React.MouseEvent) {
+    e.preventDefault();
+    window.location.href = "/register"; // adapte si ta route d'inscription a un autre chemin
+  }
+
+  function handleUnavailable(feature: string) {
+    setError(`${feature} n'est pas encore disponible — la route backend n'existe pas encore.`);
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -25,71 +28,21 @@ export default function LoginPage() {
     }
     try {
       setLoading(true);
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (signInError) throw signInError;
-      // Connexion réussie → redirige vers l'app.
-      // Remplace "/chat" par ta vraie route d'accueil si besoin.
-      window.location.href = "/chat";
-    } catch (err) {
+      const res = await api.post("/auth/login", { email, password });
+      // Adapte le nom du champ ci-dessous si ton backend renvoie autre chose que "token"
+      const token = res.data?.token;
+      if (token) {
+        localStorage.setItem("token", token);
+      }
+      window.location.href = "/chat"; // adapte à ta vraie route d'accueil
+    } catch (err: any) {
       const message =
-        err instanceof Error ? err.message : "Connexion impossible. Vérifie tes identifiants.";
+        err?.response?.data?.message ||
+        "Connexion impossible. Vérifie tes identifiants.";
       setError(message);
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleGoogleLogin() {
-    setError("");
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + "/chat" },
-    });
-    if (oauthError) setError(oauthError.message);
-  }
-
-  async function handleAppleLogin() {
-    setError("");
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: { redirectTo: window.location.origin + "/chat" },
-    });
-    if (oauthError) setError(oauthError.message);
-  }
-
-  async function handleSendReset() {
-    if (!resetEmail) return;
-    setResetError("");
-    try {
-      setResetLoading(true);
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
-        resetEmail,
-        { redirectTo: window.location.origin + "/reset-password" }
-      );
-      if (resetErr) throw resetErr;
-      setResetSent(true);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail pour le moment.";
-      setResetError(message);
-    } finally {
-      setResetLoading(false);
-    }
-  }
-
-  function closeForgot() {
-    setShowForgot(false);
-    setResetSent(false);
-    setResetEmail("");
-    setResetError("");
-  }
-
-  function goToSignup(e: React.MouseEvent) {
-    e.preventDefault();
-    window.location.href = "/register"; // adapte si ta route d'inscription a un autre chemin
   }
 
   return (
@@ -132,7 +85,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 className="auth-forgot-link"
-                onClick={() => setShowForgot(true)}
+                onClick={() => handleUnavailable("La réinitialisation du mot de passe")}
               >
                 Mot de passe oublié ?
               </button>
@@ -156,10 +109,18 @@ export default function LoginPage() {
         <div className="auth-divider">ou continuer avec</div>
 
         <div className="auth-social-row">
-          <button type="button" className="auth-social-btn" onClick={handleGoogleLogin}>
+          <button
+            type="button"
+            className="auth-social-btn"
+            onClick={() => handleUnavailable("La connexion avec Google")}
+          >
             <GoogleIcon /> Google
           </button>
-          <button type="button" className="auth-social-btn" onClick={handleAppleLogin}>
+          <button
+            type="button"
+            className="auth-social-btn"
+            onClick={() => handleUnavailable("La connexion avec Apple")}
+          >
             <AppleIcon /> Apple
           </button>
         </div>
@@ -171,56 +132,6 @@ export default function LoginPage() {
           </a>
         </div>
       </div>
-
-      {showForgot && (
-        <div className="auth-modal-backdrop" onClick={closeForgot}>
-          <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-            {!resetSent ? (
-              <>
-                <h3>Mot de passe oublié</h3>
-                <p>
-                  Indique ton adresse e-mail, on t'envoie un lien pour
-                  choisir un nouveau mot de passe.
-                </p>
-                {resetError && <div className="auth-error">{resetError}</div>}
-                <input
-                  type="email"
-                  className="auth-input"
-                  placeholder="vous@exemple.com"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  autoComplete="email"
-                />
-                <div className="auth-modal-actions">
-                  <button className="auth-modal-cancel" onClick={closeForgot}>
-                    Annuler
-                  </button>
-                  <button
-                    className="auth-submit"
-                    style={{ marginTop: 0 }}
-                    onClick={handleSendReset}
-                    disabled={resetLoading || !resetEmail}
-                  >
-                    {resetLoading ? "Envoi..." : "Envoyer le lien"}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3>E-mail envoyé ✉️</h3>
-                <p>
-                  Si un compte existe pour {resetEmail}, un lien de
-                  réinitialisation vient d'être envoyé. Pense à vérifier
-                  tes spams.
-                </p>
-                <button className="auth-submit" onClick={closeForgot}>
-                  Retour à la connexion
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
