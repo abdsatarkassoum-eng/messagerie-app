@@ -13,9 +13,25 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="FriEnds" />
 
+    <!-- Connexion anticipée au serveur des polices (accélère leur chargement) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Chargement des polices en arrière-plan, SANS bloquer l'affichage de la page -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      />
+    </noscript>
+
     <style>
-      /* Empêche tout élément (image, vidéo, etc.) de faire déborder la page
-         horizontalement et de la décaler, peu importe sa taille d'origine. */
       html, body {
         overflow-x: hidden;
         max-width: 100vw;
