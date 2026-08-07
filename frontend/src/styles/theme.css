@@ -2,7 +2,7 @@
    Design system — palette "Ardoise & Sarcelle"
    Display : Space Grotesk / Body : Inter / Mono (heures) : JetBrains Mono
    =================================================================== */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 
 :root {
   --bg: #f4f6f7;
