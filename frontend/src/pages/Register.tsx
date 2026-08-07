@@ -1,22 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, FormEvent } from "react";
 import Logo from "./Logo";
 import { GoogleIcon, AppleIcon } from "./SocialIcons";
 import "./auth.css";
 
-export default function SignupPage({
-  onSubmit,        // (formData) => Promise|void
-  onGoogleSignup,   // () => void
-  onAppleSignup,    // () => void
-  onGoToLogin,      // () => void
-}) {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+interface SignupFormData {
+  username: string;
+  email: string;
+  password: string;
+  avatarFile: File | null;
+}
 
-  async function handleSubmit(e) {
+interface SignupPageProps {
+  onSubmit?: (data: SignupFormData) => Promise<void> | void;
+  onGoogleSignup?: () => void;
+  onAppleSignup?: () => void;
+  onGoToLogin?: () => void;
+}
+
+export default function SignupPage({
+  onSubmit,
+  onGoogleSignup,
+  onAppleSignup,
+  onGoToLogin,
+}: SignupPageProps) {
+  const [username, setUsername] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     if (!username || !email || !password) {
@@ -31,7 +45,9 @@ export default function SignupPage({
       setLoading(true);
       await onSubmit?.({ username, email, password, avatarFile });
     } catch (err) {
-      setError(err?.message || "Impossible de créer le compte pour le moment.");
+      const message =
+        err instanceof Error ? err.message : "Impossible de créer le compte pour le moment.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -62,7 +78,7 @@ export default function SignupPage({
               id="signup-avatar"
               type="file"
               accept="image/*"
-              onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
+              onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
             />
           </div>
 
