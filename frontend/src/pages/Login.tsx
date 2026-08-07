@@ -1,23 +1,10 @@
 import React, { useState, FormEvent } from "react";
 import Logo from "./Logo";
 import { GoogleIcon, AppleIcon } from "./SocialIcons";
+import { supabase } from "../lib/supabaseClient"; // ⚠️ adapte le chemin si ton client Supabase est ailleurs
 import "./auth.css";
 
-interface LoginPageProps {
-  onSubmit?: (email: string, password: string) => Promise<void> | void;
-  onGoogleLogin?: () => void;
-  onAppleLogin?: () => void;
-  onSendResetLink?: (email: string) => Promise<void> | void;
-  onGoToSignup?: () => void;
-}
-
-export default function LoginPage({
-  onSubmit,
-  onGoogleLogin,
-  onAppleLogin,
-  onSendResetLink,
-  onGoToSignup,
-}: LoginPageProps) {
+export default function LoginPage() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -26,6 +13,7 @@ export default function LoginPage({
   const [showForgot, setShowForgot] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState<string>("");
   const [resetSent, setResetSent] = useState<boolean>(false);
+  const [resetError, setResetError] = useState<string>("");
   const [resetLoading, setResetLoading] = useState<boolean>(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -37,7 +25,14 @@ export default function LoginPage({
     }
     try {
       setLoading(true);
-      await onSubmit?.(email, password);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+      // Connexion réussie → redirige vers l'app.
+      // Remplace "/chat" par ta vraie route d'accueil si besoin.
+      window.location.href = "/chat";
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Connexion impossible. Vérifie tes identifiants.";
@@ -47,15 +42,39 @@ export default function LoginPage({
     }
   }
 
+  async function handleGoogleLogin() {
+    setError("");
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + "/chat" },
+    });
+    if (oauthError) setError(oauthError.message);
+  }
+
+  async function handleAppleLogin() {
+    setError("");
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: { redirectTo: window.location.origin + "/chat" },
+    });
+    if (oauthError) setError(oauthError.message);
+  }
+
   async function handleSendReset() {
     if (!resetEmail) return;
+    setResetError("");
     try {
       setResetLoading(true);
-      await onSendResetLink?.(resetEmail);
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
+        resetEmail,
+        { redirectTo: window.location.origin + "/reset-password" }
+      );
+      if (resetErr) throw resetErr;
       setResetSent(true);
-    } catch {
-      // message neutre pour ne pas divulguer si l'email existe
-      setResetSent(true);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail pour le moment.";
+      setResetError(message);
     } finally {
       setResetLoading(false);
     }
@@ -65,6 +84,12 @@ export default function LoginPage({
     setShowForgot(false);
     setResetSent(false);
     setResetEmail("");
+    setResetError("");
+  }
+
+  function goToSignup(e: React.MouseEvent) {
+    e.preventDefault();
+    window.location.href = "/register"; // adapte si ta route d'inscription a un autre chemin
   }
 
   return (
@@ -131,17 +156,17 @@ export default function LoginPage({
         <div className="auth-divider">ou continuer avec</div>
 
         <div className="auth-social-row">
-          <button type="button" className="auth-social-btn" onClick={onGoogleLogin}>
+          <button type="button" className="auth-social-btn" onClick={handleGoogleLogin}>
             <GoogleIcon /> Google
           </button>
-          <button type="button" className="auth-social-btn" onClick={onAppleLogin}>
+          <button type="button" className="auth-social-btn" onClick={handleAppleLogin}>
             <AppleIcon /> Apple
           </button>
         </div>
 
         <div className="auth-footer">
           Pas encore de compte ? L'accès se fait sur invitation.{" "}
-          <a href="#" onClick={onGoToSignup}>
+          <a href="/register" onClick={goToSignup}>
             J'ai un lien d'inscription
           </a>
         </div>
@@ -157,6 +182,7 @@ export default function LoginPage({
                   Indique ton adresse e-mail, on t'envoie un lien pour
                   choisir un nouveau mot de passe.
                 </p>
+                {resetError && <div className="auth-error">{resetError}</div>}
                 <input
                   type="email"
                   className="auth-input"
@@ -184,7 +210,8 @@ export default function LoginPage({
                 <h3>E-mail envoyé ✉️</h3>
                 <p>
                   Si un compte existe pour {resetEmail}, un lien de
-                  réinitialisation vient d'être envoyé.
+                  réinitialisation vient d'être envoyé. Pense à vérifier
+                  tes spams.
                 </p>
                 <button className="auth-submit" onClick={closeForgot}>
                   Retour à la connexion
