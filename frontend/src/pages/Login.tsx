@@ -1,26 +1,34 @@
-import React, { useState } from "react";
+import React, { useState, FormEvent } from "react";
 import Logo from "./Logo";
 import { GoogleIcon, AppleIcon } from "./SocialIcons";
 import "./auth.css";
 
+interface LoginPageProps {
+  onSubmit?: (email: string, password: string) => Promise<void> | void;
+  onGoogleLogin?: () => void;
+  onAppleLogin?: () => void;
+  onSendResetLink?: (email: string) => Promise<void> | void;
+  onGoToSignup?: () => void;
+}
+
 export default function LoginPage({
-  onSubmit,       // (email, password) => Promise|void
-  onGoogleLogin,   // () => void
-  onAppleLogin,    // () => void
-  onSendResetLink, // (email) => Promise|void
-  onGoToSignup,    // () => void
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  onSubmit,
+  onGoogleLogin,
+  onAppleLogin,
+  onSendResetLink,
+  onGoToSignup,
+}: LoginPageProps) {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const [showForgot, setShowForgot] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetSent, setResetSent] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState<boolean>(false);
+  const [resetEmail, setResetEmail] = useState<string>("");
+  const [resetSent, setResetSent] = useState<boolean>(false);
+  const [resetLoading, setResetLoading] = useState<boolean>(false);
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     if (!email || !password) {
@@ -31,7 +39,9 @@ export default function LoginPage({
       setLoading(true);
       await onSubmit?.(email, password);
     } catch (err) {
-      setError(err?.message || "Connexion impossible. Vérifie tes identifiants.");
+      const message =
+        err instanceof Error ? err.message : "Connexion impossible. Vérifie tes identifiants.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -43,8 +53,8 @@ export default function LoginPage({
       setResetLoading(true);
       await onSendResetLink?.(resetEmail);
       setResetSent(true);
-    } catch (err) {
-      // on affiche quand même un message neutre pour ne pas divulguer si l'email existe
+    } catch {
+      // message neutre pour ne pas divulguer si l'email existe
       setResetSent(true);
     } finally {
       setResetLoading(false);
