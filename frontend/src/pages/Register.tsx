@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "./Logo";
+import AuthMark from "./AuthMark";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./auth.css";
@@ -21,7 +21,6 @@ export default function SignupPage() {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Charge le script Google et affiche le vrai bouton "Continuer avec Google"
   useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
@@ -117,8 +116,7 @@ export default function SignupPage() {
       <div className="auth-blob auth-blob--2" />
 
       <div className="auth-card">
-        <Logo />
-        <div className="auth-brand">FriEnds</div>
+        <AuthMark />
 
         <div className="auth-title">Créer ton compte ✨</div>
 
@@ -183,4 +181,4 @@ export default function SignupPage() {
       </div>
     </div>
   );
-    }
+               }
