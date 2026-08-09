@@ -2,7 +2,6 @@ const jwt = require('jsonwebtoken');
 const { User, ConversationMember } = require('../models');
 
 function initSockets(io) {
-  // Authentification du socket via le token JWT
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token;
@@ -22,16 +21,13 @@ function initSockets(io) {
   io.on('connection', async (socket) => {
     const userId = socket.userId;
 
-    // Rejoint sa propre "room" personnelle (notifications) et celles de ses conversations
     socket.join(`user:${userId}`);
     const memberships = await ConversationMember.findAll({ where: { userId } });
     memberships.forEach((m) => socket.join(`conversation:${m.conversationId}`));
 
-    // Marquer l'utilisateur en ligne
     await User.update({ status: 'online', lastSeen: new Date() }, { where: { id: userId } });
     io.emit('presence:update', { userId, status: 'online' });
 
-    // --- Frappe en cours ---
     socket.on('typing:start', ({ conversationId }) => {
       socket.to(`conversation:${conversationId}`).emit('typing:update', {
         conversationId,
@@ -48,18 +44,25 @@ function initSockets(io) {
       });
     });
 
-    // --- Rejoindre une nouvelle conversation dynamiquement (ex: après création d'un groupe) ---
     socket.on('conversation:join', ({ conversationId }) => {
       socket.join(`conversation:${conversationId}`);
     });
 
-    // --- Signalisation WebRTC pour les appels audio/vidéo ---
+    // Prévient les autres membres de la conversation que cet utilisateur vient de la lire
+    socket.on('conversation:read', ({ conversationId }) => {
+      socket.to(`conversation:${conversationId}`).emit('conversation:read', {
+        conversationId,
+        userId,
+        readAt: new Date(),
+      });
+    });
+
     socket.on('call:invite', ({ conversationId, targetUserId, offer, callType }) => {
       io.to(`user:${targetUserId}`).emit('call:incoming', {
         conversationId,
         fromUserId: userId,
         offer,
-        callType, // 'audio' | 'video'
+        callType,
       });
     });
 
@@ -79,7 +82,6 @@ function initSockets(io) {
       io.to(`user:${targetUserId}`).emit('call:ended', { fromUserId: userId });
     });
 
-    // --- Déconnexion ---
     socket.on('disconnect', async () => {
       await User.update(
         { status: 'offline', lastSeen: new Date() },
