@@ -8,6 +8,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (formData: FormData) => Promise<void>;
+  loginWithToken: (token: string, user: UserProfile) => void;
   logout: () => Promise<void>;
   setUser: (u: UserProfile) => void;
 }
@@ -55,6 +56,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.data.user);
   };
 
+  // Utilisé après une connexion Google réussie : le token et l'utilisateur
+  // sont déjà renvoyés par le backend, pas besoin de rappeler l'API.
+  const loginWithToken = (newToken: string, newUser: UserProfile) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+    setUser(newUser);
+  };
+
   const logout = async () => {
     try {
       await api.post('/auth/logout');
@@ -67,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, loginWithToken, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );
