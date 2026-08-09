@@ -1,6 +1,6 @@
 import React, { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "./Logo";
+import AuthMark from "./AuthMark";
 import api from "../services/api";
 import "./auth.css";
 
@@ -42,8 +42,7 @@ export default function ForgotPasswordPage() {
       <div className="auth-blob auth-blob--2" />
 
       <div className="auth-card">
-        <Logo />
-        <div className="auth-brand">FriEnds</div>
+        <AuthMark />
 
         <div className="auth-title">Mot de passe oublié 🔑</div>
         <p className="auth-subtitle">
