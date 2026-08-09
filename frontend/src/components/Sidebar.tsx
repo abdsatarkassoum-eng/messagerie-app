@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -7,7 +7,7 @@ import NewGroupModal from './NewGroupModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { MessageCircle, CircleDashed, Users, Bell, Plus, Home } from 'lucide-react';
+import { MessageCircle, CircleDashed, Users, Bell, Plus, Home, Check, CheckCheck } from 'lucide-react';
 
 type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
@@ -167,6 +167,8 @@ export default function Sidebar({
             conversations.map((c) => {
               const other = !c.isGroup ? c.members.find((m) => m.id !== user?.id) : null;
               const isOnline = other ? onlineStatus[other.id] : false;
+              const isUnread = c.unreadCount > 0;
+              const lastMessageIsMine = c.lastMessage?.senderId === user?.id;
               return (
                 <div
                   key={c.id}
@@ -180,11 +182,46 @@ export default function Sidebar({
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{c.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {c.lastMessage?.type === 'text' ? c.lastMessage.content : c.lastMessage ? 'Pièce jointe' : 'Nouvelle conversation'}
+                    <div style={{ fontWeight: isUnread ? 700 : 600, fontSize: '0.92rem' }}>{c.name}</div>
+                    <div
+                      style={{
+                        fontSize: '0.8rem',
+                        color: isUnread ? 'var(--text)' : 'var(--text-muted)',
+                        fontWeight: isUnread ? 600 : 400,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      {lastMessageIsMine && c.lastMessage && (
+                        c.lastMessageSeenByOther ? (
+                          <CheckCheck size={13} color="#12a389" style={{ flexShrink: 0 }} />
+                        ) : (
+                          <Check size={13} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                        )
+                      )}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {c.lastMessage?.type === 'text' ? c.lastMessage.content : c.lastMessage ? 'Pièce jointe' : 'Nouvelle conversation'}
+                      </span>
                     </div>
                   </div>
+                  {isUnread && (
+                    <span
+                      className="badge"
+                      style={{
+                        minWidth: 20,
+                        height: 20,
+                        fontSize: '0.7rem',
+                        background: '#12a389',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {c.unreadCount > 9 ? '9+' : c.unreadCount}
+                    </span>
+                  )}
                 </div>
               );
             })
@@ -253,4 +290,4 @@ export default function Sidebar({
       )}
     </div>
   );
-}
+                               }
