@@ -1,6 +1,6 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import Logo from "./Logo";
+import AuthMark from "./AuthMark";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import "./auth.css";
@@ -102,8 +102,7 @@ export default function LoginPage() {
       <div className="auth-blob auth-blob--2" />
 
       <div className="auth-card">
-        <Logo />
-        <div className="auth-brand">FriEnds</div>
+        <AuthMark />
 
         <div className="auth-title">Bon retour 👋</div>
         <p className="auth-subtitle">
