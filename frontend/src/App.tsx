@@ -4,6 +4,8 @@ import { useAuth } from './context/AuthContext';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const RequestInvite = lazy(() => import('./pages/RequestInvite'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Feed = lazy(() => import('./pages/Feed'));
@@ -48,6 +50,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+        <Route path="/reset-password/:token" element={<PublicRoute><ResetPassword /></PublicRoute>} />
         <Route path="/join/:token" element={<RequestInvite />} />
         <Route
           path="/"
@@ -101,4 +105,4 @@ export default function App() {
       </Routes>
     </Suspense>
   );
-                                                        }
+}
