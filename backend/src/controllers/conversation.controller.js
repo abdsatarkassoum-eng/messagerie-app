@@ -41,6 +41,24 @@ async function listConversations(req, res) {
         displayAvatar = other ? other.avatarUrl : null;
       }
 
+      // Nombre de messages non lus : arrivés après mon lastReadAt, pas envoyés par moi
+      const myMembership = members.find((m) => m.userId === req.user.id);
+      const unreadCount = await Message.count({
+        where: {
+          conversationId: conv.id,
+          senderId: { [Op.ne]: req.user.id },
+          createdAt: { [Op.gt]: myMembership ? myMembership.lastReadAt : new Date(0) },
+        },
+      });
+
+      // "Vu" : uniquement pour les conversations privées, si le dernier message vient de moi
+      let lastMessageSeenByOther = null;
+      if (!conv.isGroup && lastMessage && lastMessage.senderId === req.user.id) {
+        const otherMembership = members.find((m) => m.userId !== req.user.id);
+        lastMessageSeenByOther =
+          !!otherMembership && new Date(otherMembership.lastReadAt) >= new Date(lastMessage.createdAt);
+      }
+
       result.push({
         id: conv.id,
         isGroup: conv.isGroup,
@@ -57,6 +75,8 @@ async function listConversations(req, res) {
             }
           : null,
         lastMessageAt: conv.lastMessageAt,
+        unreadCount,
+        lastMessageSeenByOther,
       });
     }
 
@@ -78,7 +98,6 @@ async function createOrGetPrivateConversation(req, res) {
     const other = await User.findByPk(userId);
     if (!other) return res.status(404).json({ message: 'Utilisateur introuvable.' });
 
-    // Vérifie s'il existe déjà une conversation privée entre les deux
     const myMemberships = await ConversationMember.findAll({ where: { userId: req.user.id } });
     const myConvIds = myMemberships.map((m) => m.conversationId);
 
