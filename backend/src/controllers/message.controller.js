@@ -1,7 +1,7 @@
 const { Conversation, ConversationMember, Message, User } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
-const { sendPushToUser } = require('../utils/webPush');
+const { notify } = require('../utils/notify');
 
 async function assertMember(conversationId, userId) {
   return ConversationMember.findOne({ where: { conversationId, userId } });
@@ -66,10 +66,12 @@ async function sendMessage(req, res) {
       createdAt: message.createdAt,
     };
 
-    // Diffuser en temps réel à tous les membres de la conversation
-    req.app.get('io')?.to(`conversation:${conversationId}`).emit('message:new', payload);
+    const io = req.app.get('io');
 
-    // Notification push aux autres membres de la conversation
+    // Diffuser en temps réel à tous les membres de la conversation
+    io?.to(`conversation:${conversationId}`).emit('message:new', payload);
+
+    // Notification (historique + push) aux autres membres de la conversation
     const otherMembers = await ConversationMember.findAll({
       where: { conversationId },
     });
@@ -77,7 +79,11 @@ async function sendMessage(req, res) {
     otherMembers
       .filter((m) => m.userId !== req.user.id)
       .forEach((m) => {
-        sendPushToUser(m.userId, {
+        notify(io, {
+          userId: m.userId,
+          type: 'message',
+          fromUserId: req.user.id,
+          conversationId,
           title: conversation.isGroup ? `${req.user.username} (${conversation.name})` : req.user.username,
           body: preview || 'Nouveau message',
           url: '/',
