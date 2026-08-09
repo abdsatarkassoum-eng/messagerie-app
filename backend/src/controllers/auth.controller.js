@@ -1,9 +1,13 @@
  const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const { User, JoinRequest } = require('../models');
 const generateToken = require('../utils/generateToken');
 const uploadFile = require('../utils/uploadFile');
+const { sendResetPasswordEmail } = require('../utils/mailer');
 
 const INVITE_ONLY = process.env.INVITE_ONLY === 'true';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // POST /api/auth/register
 async function register(req, res) {
@@ -19,7 +23,6 @@ async function register(req, res) {
         .json({ message: 'Le mot de passe doit contenir au moins 6 caractères.' });
     }
 
-    // Si le mode "sur invitation" est activé, un token de validation est requis
     if (INVITE_ONLY) {
       if (!registrationToken) {
         return res.status(403).json({
@@ -91,7 +94,7 @@ async function login(req, res) {
     }
 
     const user = await User.findOne({ where: { email } });
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({ message: 'Identifiants incorrects.' });
     }
     if (!user.isActive) {
@@ -112,6 +115,117 @@ async function login(req, res) {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
+  }
+}
+
+// POST /api/auth/google
+async function googleAuth(req, res) {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Jeton Google manquant.' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    let user = await User.findOne({ where: { googleId } });
+
+    if (!user) {
+      user = await User.findOne({ where: { email } });
+      if (user) {
+        user.googleId = googleId;
+        await user.save();
+      } else {
+        let username = (name || email.split('@')[0]).replace(/\s+/g, '').toLowerCase();
+        const existingUsername = await User.findOne({ where: { username } });
+        if (existingUsername) {
+          username = `${username}${Math.floor(Math.random() * 10000)}`;
+        }
+        user = await User.create({
+          username,
+          email,
+          googleId,
+          avatarUrl: picture || null,
+        });
+      }
+    }
+
+    if (!user.isActive) {
+      return res.status(403).json({ message: 'Ce compte a été désactivé.' });
+    }
+
+    user.status = 'online';
+    user.lastSeen = new Date();
+    await user.save();
+
+    const token = generateToken(user);
+    return res.json({ token, user: sanitize(user) });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Connexion avec Google impossible.' });
+  }
+}
+
+// POST /api/auth/forgot-password
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'E-mail requis.' });
+    }
+
+    const user = await User.findOne({ where: { email } });
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      user.resetToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+      user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+      await user.save();
+
+      const resetLink = `${process.env.FRONTEND_URL}/reset-password/${rawToken}`;
+      await sendResetPasswordEmail(user.email, resetLink);
+    }
+
+    return res.json({
+      message: 'Si un compte existe avec cet e-mail, un lien de réinitialisation a été envoyé.',
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur serveur.' });
+  }
+}
+
+// POST /api/auth/reset-password
+async function resetPassword(req, res) {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Jeton et nouveau mot de passe requis.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const user = await User.findOne({ where: { resetToken: hashedToken } });
+
+    if (!user || !user.resetTokenExpiry || user.resetTokenExpiry < new Date()) {
+      return res.status(400).json({ message: 'Lien de réinitialisation invalide ou expiré.' });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    return res.json({ message: 'Mot de passe mis à jour avec succès.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur serveur.' });
   }
 }
 
@@ -137,4 +251,4 @@ function sanitize(user) {
   return { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt, wallpaper, profileVisibility, mediaAutoDownload };
 }
 
-module.exports = { register, login, me, logout, sanitize };
+module.exports = { register, login, googleAuth, forgotPassword, resetPassword, me, logout, sanitize };
