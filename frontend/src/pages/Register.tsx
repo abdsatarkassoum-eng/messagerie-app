@@ -1,31 +1,82 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import Logo from "./Logo";
-import { GoogleIcon, AppleIcon } from "./SocialIcons";
-import api from "../services/api"; // ⚠️ adapte le chemin si Register.tsx n'est pas dans src/pages/
+import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 import "./auth.css";
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export default function SignupPage() {
+  const navigate = useNavigate();
+  const { loginWithToken } = useAuth();
+
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  function goToLogin(e: React.MouseEvent) {
-    e.preventDefault();
-    window.location.href = "/login"; // adapte si ta route de connexion a un autre chemin
+  // Charge le script Google et affiche le vrai bouton "Continuer avec Google"
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+        });
+        const container = document.getElementById("google-signin-btn");
+        if (container) {
+          window.google.accounts.id.renderButton(container, {
+            theme: "outline",
+            size: "large",
+            width: 320,
+            text: "signup_with",
+          });
+        }
+      }
+    };
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleGoogleResponse(response: { credential: string }) {
+    setError("");
+    try {
+      setLoading(true);
+      const res = await api.post("/auth/google", { credential: response.credential });
+      loginWithToken(res.data.token, res.data.user);
+      navigate("/");
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || "Connexion avec Google impossible.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleUnavailable(feature: string) {
-    setError(`${feature} n'est pas encore disponible — la route backend n'existe pas encore.`);
+  function goToLogin(e: React.MouseEvent) {
+    e.preventDefault();
+    navigate("/login");
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     if (!username || !email || !password) {
-      setError("Tous les champs marqués sont requis.");
+      setError("Tous les champs sont requis.");
       return;
     }
     if (password.length < 6) {
@@ -34,28 +85,21 @@ export default function SignupPage() {
     }
     try {
       setLoading(true);
-
-      // Le backend attend du multipart/form-data (upload.single("avatar"))
       const formData = new FormData();
       formData.append("username", username);
       formData.append("email", email);
       formData.append("password", password);
-      if (avatarFile) {
-        formData.append("avatar", avatarFile);
-      }
 
       const res = await api.post("/auth/register", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // Si ton backend connecte automatiquement après inscription et renvoie un token :
       const token = res.data?.token;
       if (token) {
-        localStorage.setItem("token", token);
-        window.location.href = "/chat"; // adapte à ta vraie route d'accueil
+        loginWithToken(token, res.data.user);
+        navigate("/");
       } else {
-        // Sinon, redirige simplement vers la connexion
-        window.location.href = "/login";
+        navigate("/login");
       }
     } catch (err: any) {
       const message =
@@ -77,25 +121,10 @@ export default function SignupPage() {
         <div className="auth-brand">FriEnds</div>
 
         <div className="auth-title">Créer ton compte ✨</div>
-        <p className="auth-subtitle">
-          Un lien d'inscription valide est requis pour créer un compte.
-        </p>
 
         {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit} noValidate>
-          <div className="auth-field">
-            <label className="auth-label" htmlFor="signup-avatar">
-              Photo de profil (optionnel)
-            </label>
-            <input
-              id="signup-avatar"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
-
           <div className="auth-field">
             <label className="auth-label" htmlFor="signup-username">
               Nom d'utilisateur
@@ -146,22 +175,7 @@ export default function SignupPage() {
 
         <div className="auth-divider">ou continuer avec</div>
 
-        <div className="auth-social-row">
-          <button
-            type="button"
-            className="auth-social-btn"
-            onClick={() => handleUnavailable("L'inscription avec Google")}
-          >
-            <GoogleIcon /> Google
-          </button>
-          <button
-            type="button"
-            className="auth-social-btn"
-            onClick={() => handleUnavailable("L'inscription avec Apple")}
-          >
-            <AppleIcon /> Apple
-          </button>
-        </div>
+        <div id="google-signin-btn" style={{ display: "flex", justifyContent: "center" }} />
 
         <div className="auth-footer">
           Déjà inscrit ? <a href="/login" onClick={goToLogin}>Se connecter</a>
@@ -169,4 +183,4 @@ export default function SignupPage() {
       </div>
     </div>
   );
-}
+    }
