@@ -56,6 +56,11 @@ export default function CallModal({ socket, session, onClose }: Props) {
     pc.ontrack = (event) => {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        // Force la lecture : certains navigateurs mobiles bloquent silencieusement
+        // l'autoplay avec son si on ne le déclenche pas explicitement.
+        remoteVideoRef.current.play().catch((err) => {
+          console.warn('Lecture du flux distant bloquée, nouvelle tentative…', err);
+        });
       }
     };
     pcRef.current = pc;
@@ -158,12 +163,23 @@ export default function CallModal({ socket, session, onClose }: Props) {
         {status === 'active' && (session.callType === 'video' ? 'Appel vidéo en cours' : 'Appel audio en cours')}
       </p>
 
-      {session.callType === 'video' && (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <video ref={remoteVideoRef} autoPlay playsInline className="call-video" />
+      {/*
+        Élément vidéo TOUJOURS monté (même pour un appel audio) : c'est lui qui
+        joue le son distant. Pour un appel audio, on le cache visuellement mais
+        il reste dans le DOM pour que le son soit bien lu.
+      */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={session.callType === 'video' ? 'call-video' : undefined}
+          style={session.callType === 'audio' ? { width: 0, height: 0 } : undefined}
+        />
+        {session.callType === 'video' && (
           <video ref={localVideoRef} autoPlay playsInline muted style={{ width: 160, borderRadius: 12 }} />
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="call-controls">
         {status === 'ringing' ? (
