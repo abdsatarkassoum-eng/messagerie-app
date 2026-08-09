@@ -11,7 +11,6 @@
   background: linear-gradient(160deg, #eaf6f1 0%, #e3f1ec 45%, #dff0ea 100%);
 }
 
-/* Formes douces animées en fond — discret, pas envahissant */
 .auth-blob {
   position: absolute;
   border-radius: 50%;
@@ -59,36 +58,52 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Logo "Fr" — identique à l'icône d'accueil ---- */
-.auth-logo {
-  width: 76px;
-  height: 76px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #7c6ff2 0%, #b06fe0 45%, #f2914a 100%);
+/* ---- Signature : cluster d'avatars + nom en dégradé ---- */
+.auth-mark {
+  margin-bottom: 20px;
+}
+
+.auth-mark-cluster {
+  display: flex;
+  margin-bottom: 14px;
+}
+
+.auth-mark-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 24px -8px rgba(124, 111, 242, 0.45);
-  margin-bottom: 16px;
-  animation: logo-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.auth-logo span {
+  color: #ffffff;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
   font-weight: 800;
-  font-size: 30px;
-  color: #ffffff;
-  letter-spacing: -0.5px;
+  font-size: 20px;
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 18px -8px rgba(15, 60, 50, 0.35);
+  margin-left: -14px;
+  animation: avatar-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
-@keyframes logo-in {
-  from { opacity: 0; transform: scale(0.6) rotate(-8deg); }
-  to { opacity: 1; transform: scale(1) rotate(0deg); }
+.auth-mark-avatar:first-child {
+  margin-left: 0;
+}
+@keyframes avatar-in {
+  from { opacity: 0; transform: scale(0.4) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-mark-avatar { animation: none; }
 }
 
 .auth-brand {
-  font-weight: 700;
-  font-size: 20px;
-  color: #0f3d33;
-  margin-bottom: 20px;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  background: linear-gradient(120deg, #0d7a68 0%, #12a389 45%, #f2914a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .auth-title {
@@ -257,7 +272,6 @@
   margin-bottom: 16px;
 }
 
-/* Modale "mot de passe oublié" */
 .auth-modal-backdrop {
   position: fixed;
   inset: 0;
