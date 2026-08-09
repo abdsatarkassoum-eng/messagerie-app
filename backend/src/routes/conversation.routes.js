@@ -1,14 +1,173 @@
-const express = require('express');
-const router = express.Router();
-const { auth } = require('../middleware/auth');
+const { Op } = require('sequelize');
 const {
-  listConversations,
-  createOrGetPrivateConversation,
-  getMessages,
-} = require('../controllers/conversation.controller');
+  Conversation,
+  ConversationMember,
+  Message,
+  User,
+  Friendship,
+} = require('../models');
+const { sanitize } = require('./auth.controller');
 
-router.get('/', auth, listConversations);
-router.post('/private', auth, createOrGetPrivateConversation);
-router.get('/:id/messages', auth, getMessages);
+// GET /api/conversations - liste des conversations de l'utilisateur
+async function listConversations(req, res) {
+  try {
+    const memberships = await ConversationMember.findAll({
+      where: { userId: req.user.id },
+    });
+    const conversationIds = memberships.map((m) => m.conversationId);
 
-module.exports = router;
+    const conversations = await Conversation.findAll({
+      where: { id: conversationIds },
+      order: [['lastMessageAt', 'DESC']],
+    });
+
+    const result = [];
+    for (const conv of conversations) {
+      const members = await ConversationMember.findAll({
+        where: { conversationId: conv.id },
+      });
+      const users = await User.findAll({ where: { id: members.map((m) => m.userId) } });
+
+      const lastMessage = await Message.findOne({
+        where: { conversationId: conv.id },
+        order: [['createdAt', 'DESC']],
+      });
+
+      let displayName = conv.name;
+      let displayAvatar = conv.avatarUrl;
+      if (!conv.isGroup) {
+        const other = users.find((u) => u.id !== req.user.id);
+        displayName = other ? other.username : 'Conversation';
+        displayAvatar = other ? other.avatarUrl : null;
+      }
+
+      const myMembership = members.find((m) => m.userId === req.user.id);
+      const unreadCount = await Message.count({
+        where: {
+          conversationId: conv.id,
+          senderId: { [Op.ne]: req.user.id },
+          createdAt: { [Op.gt]: myMembership ? myMembership.lastReadAt : new Date(0) },
+        },
+      });
+
+      let lastMessageSeenByOther = null;
+      if (!conv.isGroup && lastMessage && lastMessage.senderId === req.user.id) {
+        const otherMembership = members.find((m) => m.userId !== req.user.id);
+        lastMessageSeenByOther =
+          !!otherMembership && new Date(otherMembership.lastReadAt) >= new Date(lastMessage.createdAt);
+      }
+
+      result.push({
+        id: conv.id,
+        isGroup: conv.isGroup,
+        name: displayName,
+        avatarUrl: displayAvatar,
+        members: users.map(sanitize),
+        memberRoles: Object.fromEntries(members.map((m) => [m.userId, m.role])),
+        lastMessage: lastMessage
+          ? {
+              content: lastMessage.content,
+              type: lastMessage.type,
+              senderId: lastMessage.senderId,
+              createdAt: lastMessage.createdAt,
+            }
+          : null,
+        lastMessageAt: conv.lastMessageAt,
+        unreadCount,
+        lastMessageSeenByOther,
+      });
+    }
+
+    return res.json({ conversations: result });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération des conversations.' });
+  }
+}
+
+// POST /api/conversations/private { userId }
+async function createOrGetPrivateConversation(req, res) {
+  try {
+    const { userId } = req.body;
+    if (userId === req.user.id) {
+      return res.status(400).json({ message: 'Conversation invalide.' });
+    }
+
+    const other = await User.findByPk(userId);
+    if (!other) return res.status(404).json({ message: 'Utilisateur introuvable.' });
+
+    const myMemberships = await ConversationMember.findAll({ where: { userId: req.user.id } });
+    const myConvIds = myMemberships.map((m) => m.conversationId);
+
+    const theirMemberships = await ConversationMember.findAll({
+      where: { userId, conversationId: myConvIds },
+    });
+
+    for (const tm of theirMemberships) {
+      const conv = await Conversation.findByPk(tm.conversationId);
+      if (conv && !conv.isGroup) {
+        return res.json({ conversationId: conv.id, existing: true });
+      }
+    }
+
+    const conv = await Conversation.create({ isGroup: false, createdBy: req.user.id });
+    await ConversationMember.bulkCreate([
+      { conversationId: conv.id, userId: req.user.id, role: 'member' },
+      { conversationId: conv.id, userId, role: 'member' },
+    ]);
+
+    return res.status(201).json({ conversationId: conv.id, existing: false });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la création de la conversation.' });
+  }
+}
+
+// GET /api/conversations/:id/messages?before=&limit=
+async function getMessages(req, res) {
+  try {
+    const { id } = req.params;
+    const isMember = await ConversationMember.findOne({
+      where: { conversationId: id, userId: req.user.id },
+    });
+    if (!isMember) return res.status(403).json({ message: 'Accès refusé à cette conversation.' });
+
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const where = { conversationId: id };
+    if (req.query.before) {
+      where.createdAt = { [Op.lt]: new Date(req.query.before) };
+    }
+
+    const messages = await Message.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit,
+    });
+
+    return res.json({ messages: messages.reverse() });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération des messages.' });
+  }
+}
+
+// POST /api/conversations/:id/read - marque la conversation comme lue par l'utilisateur
+async function markAsRead(req, res) {
+  try {
+    const { id } = req.params;
+    const membership = await ConversationMember.findOne({
+      where: { conversationId: id, userId: req.user.id },
+    });
+    if (!membership) return res.status(403).json({ message: 'Accès refusé à cette conversation.' });
+
+    membership.lastReadAt = new Date();
+    await membership.save();
+
+    return res.json({ message: 'Conversation marquée comme lue.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la mise à jour.' });
+  }
+}
+
+module.exports = { listConversations, createOrGetPrivateConversation, getMessages, markAsRead };
