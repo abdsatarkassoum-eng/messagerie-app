@@ -19,28 +19,23 @@ const PushSubscription = require('./PushSubscription');
 
 // --- Associations ---
 
-// Messages
 User.hasMany(Message, { foreignKey: 'senderId', as: 'messages' });
 Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
 
 Conversation.hasMany(Message, { foreignKey: 'conversationId', as: 'messages' });
 Message.belongsTo(Conversation, { foreignKey: 'conversationId', as: 'conversation' });
 
-// Membres de conversation
 Conversation.hasMany(ConversationMember, { foreignKey: 'conversationId', as: 'members' });
 ConversationMember.belongsTo(Conversation, { foreignKey: 'conversationId' });
 ConversationMember.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 User.hasMany(ConversationMember, { foreignKey: 'userId' });
 
-// Demandes d'amis
 User.hasMany(FriendRequest, { foreignKey: 'senderId', as: 'sentFriendRequests' });
 User.hasMany(FriendRequest, { foreignKey: 'receiverId', as: 'receivedFriendRequests' });
 
-// Invitations
 User.hasMany(Invitation, { foreignKey: 'createdBy', as: 'invitations' });
 Invitation.hasMany(JoinRequest, { foreignKey: 'invitationId', as: 'joinRequests' });
 
-// Statuts
 User.hasMany(Status, { foreignKey: 'userId', as: 'statuses' });
 Status.belongsTo(User, { foreignKey: 'userId', as: 'user' });
 Status.hasMany(StatusView, { foreignKey: 'statusId', as: 'views' });
@@ -48,18 +43,15 @@ Status.hasMany(StatusLike, { foreignKey: 'statusId', as: 'likes' });
 Status.hasMany(StatusComment, { foreignKey: 'statusId', as: 'comments' });
 StatusComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 
-// Publications (fil d'actualité)
 User.hasMany(Post, { foreignKey: 'userId', as: 'posts' });
 Post.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 Post.hasMany(PostLike, { foreignKey: 'postId', as: 'likes' });
 Post.hasMany(PostComment, { foreignKey: 'postId', as: 'comments' });
 PostComment.belongsTo(User, { foreignKey: 'userId', as: 'author' });
 
-// Catalogue (produits/services)
 User.hasMany(CatalogItem, { foreignKey: 'userId', as: 'catalogItems' });
 CatalogItem.belongsTo(User, { foreignKey: 'userId', as: 'owner' });
 
-// Abonnements aux notifications push
 User.hasMany(PushSubscription, { foreignKey: 'userId', as: 'pushSubscriptions' });
 PushSubscription.belongsTo(User, { foreignKey: 'userId' });
 
@@ -74,6 +66,10 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "profileVisibility" VARCHAR(255) DEFAULT 'everyone'`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "mediaAutoDownload" BOOLEAN DEFAULT true`,
       `ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS "images" TEXT DEFAULT '[]'`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "googleId" VARCHAR(255)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetToken" VARCHAR(255)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetTokenExpiry" TIMESTAMP WITH TIME ZONE`,
+      `ALTER TABLE users ALTER COLUMN password DROP NOT NULL`,
     ];
 
     for (const query of migrations) {
@@ -108,4 +104,3 @@ module.exports = {
   PushSubscription,
   syncDatabase,
 };
-
