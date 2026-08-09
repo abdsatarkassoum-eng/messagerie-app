@@ -46,6 +46,16 @@ export default function Chat() {
     loadFriends();
   }, []);
 
+  // Marque une conversation comme lue côté serveur, prévient l'autre en temps réel,
+  // et met à jour l'affichage immédiatement de mon côté
+  const markConversationRead = (conversationId: string) => {
+    api.post(`/conversations/${conversationId}/read`).catch(() => {});
+    socket?.emit('conversation:read', { conversationId });
+    setConversations((prev) =>
+      prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+    );
+  };
+
   useEffect(() => {
     if (!socket) return;
 
@@ -57,6 +67,7 @@ export default function Chat() {
       loadConversations();
       if (msg.conversationId === activeIdRef.current && msg.id) {
         api.post(`/messages/${msg.id}/seen`).catch(() => {});
+        markConversationRead(msg.conversationId);
       }
     });
 
@@ -82,6 +93,14 @@ export default function Chat() {
       });
     });
 
+    // Un autre membre vient de lire la conversation : met à jour le "vu" chez moi
+    socket.on('conversation:read', ({ conversationId, userId: readerId }: any) => {
+      if (readerId === user?.id) return;
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, lastMessageSeenByOther: true } : c))
+      );
+    });
+
     socket.on('friend_request:accepted', () => loadFriends());
 
     socket.on('call:incoming', ({ fromUserId, offer, callType }: any) => {
@@ -98,6 +117,7 @@ export default function Chat() {
       socket.off('message:deleted');
       socket.off('presence:update');
       socket.off('typing:update');
+      socket.off('conversation:read');
       socket.off('friend_request:accepted');
       socket.off('call:incoming');
     };
@@ -112,6 +132,7 @@ export default function Chat() {
       setMessagesByConv((prev) => ({ ...prev, [id]: res.data.messages }));
     }
     socket?.emit('conversation:join', { conversationId: id });
+    markConversationRead(id);
   };
 
   const openPrivateChat = async (userId: string) => {
@@ -204,4 +225,4 @@ export default function Chat() {
       </div>
     </div>
   );
-       }
+        }
