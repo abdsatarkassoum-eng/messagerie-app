@@ -1,4 +1,4 @@
-const { Op } = require('sequelize');
+ const { Op } = require('sequelize');
 const {
   Conversation,
   ConversationMember,
@@ -41,7 +41,6 @@ async function listConversations(req, res) {
         displayAvatar = other ? other.avatarUrl : null;
       }
 
-      // Nombre de messages non lus : arrivés après mon lastReadAt, pas envoyés par moi
       const myMembership = members.find((m) => m.userId === req.user.id);
       const unreadCount = await Message.count({
         where: {
@@ -51,7 +50,6 @@ async function listConversations(req, res) {
         },
       });
 
-      // "Vu" : uniquement pour les conversations privées, si le dernier message vient de moi
       let lastMessageSeenByOther = null;
       if (!conv.isGroup && lastMessage && lastMessage.senderId === req.user.id) {
         const otherMembership = members.find((m) => m.userId !== req.user.id);
@@ -153,4 +151,23 @@ async function getMessages(req, res) {
   }
 }
 
-module.exports = { listConversations, createOrGetPrivateConversation, getMessages };
+// POST /api/conversations/:id/read - marque la conversation comme lue par l'utilisateur
+async function markAsRead(req, res) {
+  try {
+    const { id } = req.params;
+    const membership = await ConversationMember.findOne({
+      where: { conversationId: id, userId: req.user.id },
+    });
+    if (!membership) return res.status(403).json({ message: 'Accès refusé à cette conversation.' });
+
+    membership.lastReadAt = new Date();
+    await membership.save();
+
+    return res.json({ message: 'Conversation marquée comme lue.' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la mise à jour.' });
+  }
+}
+
+module.exports = { listConversations, createOrGetPrivateConversation, getMessages, markAsRead };
