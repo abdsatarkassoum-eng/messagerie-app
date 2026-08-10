@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
@@ -11,6 +12,8 @@ import TopNav from '../components/TopNav';
 export default function Chat() {
   const { user } = useAuth();
   const socket = useSocket();
+  const location = useLocation();
+  const requestedTab = (location.state as any)?.tab as 'chats' | 'friends' | 'requests' | 'status' | undefined;
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
@@ -188,6 +191,7 @@ export default function Chat() {
             onGroupCreated={handleGroupCreated}
             friends={friends}
             refreshFriends={loadFriends}
+            initialTab={requestedTab}
           />
         </div>
 
@@ -222,4 +226,4 @@ export default function Chat() {
       </div>
     </div>
   );
-    }
+            }
