@@ -142,3 +142,14 @@ export interface FullProfile {
   canViewPosts: boolean;
   posts: PostItem[];
 }
+
+export interface NotificationItem {
+  id: string;
+  type: 'message' | 'missed_call' | 'call_ended';
+  fromUser: UserProfile | null;
+  conversationId: string | null;
+  title: string;
+  body: string | null;
+  read: boolean;
+  createdAt: string;
+}
