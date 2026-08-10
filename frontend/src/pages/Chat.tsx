@@ -46,8 +46,6 @@ export default function Chat() {
     loadFriends();
   }, []);
 
-  // Marque une conversation comme lue côté serveur, prévient l'autre en temps réel,
-  // et met à jour l'affichage immédiatement de mon côté
   const markConversationRead = (conversationId: string) => {
     api.post(`/conversations/${conversationId}/read`).catch(() => {});
     socket?.emit('conversation:read', { conversationId });
@@ -93,7 +91,6 @@ export default function Chat() {
       });
     });
 
-    // Un autre membre vient de lire la conversation : met à jour le "vu" chez moi
     socket.on('conversation:read', ({ conversationId, userId: readerId }: any) => {
       if (readerId === user?.id) return;
       setConversations((prev) =>
@@ -103,12 +100,12 @@ export default function Chat() {
 
     socket.on('friend_request:accepted', () => loadFriends());
 
-    socket.on('call:incoming', ({ fromUserId, offer, callType }: any) => {
+    socket.on('call:incoming', ({ conversationId, fromUserId, offer, callType }: any) => {
       const peer =
         friends.find((f) => f.id === fromUserId) ||
         conversations.flatMap((c) => c.members).find((m) => m.id === fromUserId);
       if (peer) {
-        setCallSession({ isIncoming: true, callType, peer, offer });
+        setCallSession({ isIncoming: true, callType, peer, conversationId, offer });
       }
     });
 
@@ -174,7 +171,7 @@ export default function Chat() {
     }
     const peer = activeConversation.members.find((m) => m.id !== user?.id);
     if (!peer) return;
-    setCallSession({ isIncoming: false, callType, peer });
+    setCallSession({ isIncoming: false, callType, peer, conversationId: activeConversation.id });
   };
 
   return (
@@ -225,4 +222,4 @@ export default function Chat() {
       </div>
     </div>
   );
-        }
+    }
