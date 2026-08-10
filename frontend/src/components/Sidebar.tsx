@@ -21,6 +21,7 @@ interface Props {
   onGroupCreated: (conversationId: string) => void;
   friends: UserProfile[];
   refreshFriends: () => void;
+  initialTab?: Tab;
 }
 
 function AvatarCircle({
@@ -71,11 +72,12 @@ export default function Sidebar({
   onGroupCreated,
   friends,
   refreshFriends,
+  initialTab,
 }: Props) {
   const { user } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>('chats');
+  const [tab, setTab] = useState<Tab>(initialTab || 'chats');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
@@ -87,8 +89,6 @@ export default function Sidebar({
     setNotifications(res.data.notifications);
   };
 
-  // Charge les notifications dès l'ouverture (pas seulement quand on ouvre l'onglet),
-  // pour que le badge soit correct dès le départ.
   useEffect(() => {
     loadNotifications();
   }, []);
@@ -107,7 +107,6 @@ export default function Sidebar({
   useEffect(() => {
     if (tab === 'requests') {
       loadRequests();
-      // Marque tout comme lu dès l'ouverture de l'onglet
       const hasUnread = notifications.some((n) => !n.read);
       if (hasUnread) {
         api.post('/notifications/read-all').catch(() => {});
@@ -397,4 +396,4 @@ export default function Sidebar({
       )}
     </div>
   );
-}
+        }
