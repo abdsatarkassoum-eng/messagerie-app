@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
+import api from '../services/api';
 import { UserProfile } from '../types';
 
 export interface CallSession {
   isIncoming: boolean;
   callType: 'audio' | 'video';
   peer: UserProfile;
+  conversationId: string;
   offer?: RTCSessionDescriptionInit;
 }
 
@@ -25,6 +27,10 @@ export default function CallModal({ socket, session, onClose }: Props) {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const startedAtRef = useRef<Date | null>(null);
+  const loggedRef = useRef(false);
 
   useEffect(() => {
     if (!session.isIncoming) {
@@ -33,18 +39,38 @@ export default function CallModal({ socket, session, onClose }: Props) {
 
     socket.on('call:answered', handleAnswered);
     socket.on('call:ice-candidate', handleRemoteCandidate);
-    socket.on('call:declined', handleRemoteEnd);
-    socket.on('call:ended', handleRemoteEnd);
+    socket.on('call:declined', handleDeclined);
+    socket.on('call:ended', handleEnded);
 
     return () => {
       socket.off('call:answered', handleAnswered);
       socket.off('call:ice-candidate', handleRemoteCandidate);
-      socket.off('call:declined', handleRemoteEnd);
-      socket.off('call:ended', handleRemoteEnd);
+      socket.off('call:declined', handleDeclined);
+      socket.off('call:ended', handleEnded);
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Enregistre le résultat de l'appel — uniquement côté appelant, pour éviter les doublons
+  async function logCallOutcome(outcome: 'missed' | 'declined' | 'completed') {
+    if (session.isIncoming || loggedRef.current) return;
+    loggedRef.current = true;
+    const durationSeconds = startedAtRef.current
+      ? Math.round((Date.now() - startedAtRef.current.getTime()) / 1000)
+      : 0;
+    try {
+      await api.post('/calls/log', {
+        conversationId: session.conversationId,
+        peerId: session.peer.id,
+        callType: session.callType,
+        outcome,
+        durationSeconds,
+      });
+    } catch {
+      /* silencieux : ne bloque pas la fermeture de l'appel */
+    }
+  }
 
   function createPeerConnection() {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
@@ -56,8 +82,6 @@ export default function CallModal({ socket, session, onClose }: Props) {
     pc.ontrack = (event) => {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
-        // Force la lecture : certains navigateurs mobiles bloquent silencieusement
-        // l'autoplay avec son si on ne le déclenche pas explicitement.
         remoteVideoRef.current.play().catch((err) => {
           console.warn('Lecture du flux distant bloquée, nouvelle tentative…', err);
         });
@@ -87,6 +111,7 @@ export default function CallModal({ socket, session, onClose }: Props) {
       await pc.setLocalDescription(offer);
 
       socket.emit('call:invite', {
+        conversationId: session.conversationId,
         targetUserId: session.peer.id,
         offer,
         callType: session.callType,
@@ -119,6 +144,7 @@ export default function CallModal({ socket, session, onClose }: Props) {
   async function handleAnswered({ answer }: any) {
     if (pcRef.current) {
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+      startedAtRef.current = new Date();
       setStatus('active');
     }
   }
@@ -131,7 +157,16 @@ export default function CallModal({ socket, session, onClose }: Props) {
     }
   }
 
-  function handleRemoteEnd() {
+  // Le destinataire a refusé l'appel
+  function handleDeclined() {
+    logCallOutcome('declined');
+    cleanup();
+    onClose();
+  }
+
+  // Le destinataire a raccroché (que l'appel ait été actif ou non)
+  function handleEnded() {
+    logCallOutcome(statusRef.current === 'active' ? 'completed' : 'missed');
     cleanup();
     onClose();
   }
@@ -148,8 +183,10 @@ export default function CallModal({ socket, session, onClose }: Props) {
     onClose();
   }
 
+  // L'utilisateur raccroche lui-même
   function endCall() {
     socket.emit('call:end', { targetUserId: session.peer.id });
+    logCallOutcome(statusRef.current === 'active' ? 'completed' : 'missed');
     cleanup();
     onClose();
   }
@@ -163,11 +200,6 @@ export default function CallModal({ socket, session, onClose }: Props) {
         {status === 'active' && (session.callType === 'video' ? 'Appel vidéo en cours' : 'Appel audio en cours')}
       </p>
 
-      {/*
-        Élément vidéo TOUJOURS monté (même pour un appel audio) : c'est lui qui
-        joue le son distant. Pour un appel audio, on le cache visuellement mais
-        il reste dans le DOM pour que le son soit bien lu.
-      */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
         <video
           ref={remoteVideoRef}
@@ -193,4 +225,4 @@ export default function CallModal({ socket, session, onClose }: Props) {
       </div>
     </div>
   );
-}
+      }
