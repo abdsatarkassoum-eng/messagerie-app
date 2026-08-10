@@ -45,6 +45,7 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
   const group = allGroups[groupIndex];
   const current = group?.statuses[statusIndex];
   const isOwn = group?.user.id === viewerId;
+  const hasTrim = current?.type === 'video' && current.trimStart != null && current.trimEnd != null;
   const DURATION = current?.type === 'video' ? videoDuration : TEXT_IMAGE_DURATION;
 
   useEffect(() => {
@@ -53,8 +54,13 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
     setLikesCount(current.likesCount);
     setCommentsLoaded(false);
     setComments([]);
-    setVideoDuration(MAX_VIDEO_DURATION);
     setPaused(false);
+
+    if (current.type === 'video' && hasTrim) {
+      setVideoDuration(Math.min((current.trimEnd! - current.trimStart!) * 1000, MAX_VIDEO_DURATION));
+    } else {
+      setVideoDuration(MAX_VIDEO_DURATION);
+    }
 
     if (!isOwn) {
       api.post(`/statuses/${current.id}/view`).catch(() => {});
@@ -77,8 +83,20 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
 
   function handleVideoLoadedMetadata() {
     if (!videoRef.current) return;
-    const realDurationMs = videoRef.current.duration * 1000;
-    setVideoDuration(Math.min(realDurationMs, MAX_VIDEO_DURATION));
+    if (hasTrim && current?.trimStart != null) {
+      videoRef.current.currentTime = current.trimStart;
+    } else if (!hasTrim) {
+      const realDurationMs = videoRef.current.duration * 1000;
+      setVideoDuration(Math.min(realDurationMs, MAX_VIDEO_DURATION));
+    }
+  }
+
+  // Si un recadrage est défini, on stoppe la lecture pile à la fin choisie
+  function handleTimeUpdate() {
+    if (!videoRef.current || !hasTrim || current?.trimEnd == null) return;
+    if (videoRef.current.currentTime >= current.trimEnd) {
+      next();
+    }
   }
 
   function next() {
@@ -236,12 +254,12 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
               autoPlay
               playsInline
               onLoadedMetadata={handleVideoLoadedMetadata}
+              onTimeUpdate={handleTimeUpdate}
               onEnded={next}
               style={{ maxWidth: '100%', maxHeight: '100%' }}
             />
           )}
 
-          {/* Barre d'actions façon TikTok, à droite : voir qui a consulté (si moi), like, commentaires */}
           <div style={{ position: 'absolute', right: 10, bottom: 90, display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center' }}>
             {isOwn && (
               <button
@@ -352,4 +370,4 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
   );
 
   return createPortal(content, document.body);
-      }
+  }
