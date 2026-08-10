@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { StatusGroup, UserProfile, PostComment as StatusCommentType } from '../types';
 import { resolveFileUrl } from '../utils/url';
@@ -12,6 +13,19 @@ interface Props {
   onDeleted?: () => void;
 }
 
+const TEXT_IMAGE_DURATION = 5000;
+const MAX_VIDEO_DURATION = 90000; // 1 min 30, plafond demandé
+
+function timeAgo(dateStr: string) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "à l'instant";
+  if (mins < 60) return `il y a ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  return new Date(dateStr).toLocaleDateString('fr-FR');
+}
+
 export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onClose, onDeleted }: Props) {
   const [groupIndex, setGroupIndex] = useState(startGroupIndex);
   const [statusIndex, setStatusIndex] = useState(0);
@@ -23,12 +37,15 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
   const [comments, setComments] = useState<StatusCommentType[]>([]);
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [paused, setPaused] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(MAX_VIDEO_DURATION);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const group = allGroups[groupIndex];
   const current = group?.statuses[statusIndex];
   const isOwn = group?.user.id === viewerId;
-  const DURATION = current?.type === 'video' ? 15000 : 5000;
+  const DURATION = current?.type === 'video' ? videoDuration : TEXT_IMAGE_DURATION;
 
   useEffect(() => {
     if (!current) return;
@@ -36,20 +53,34 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
     setLikesCount(current.likesCount);
     setCommentsLoaded(false);
     setComments([]);
+    setVideoDuration(MAX_VIDEO_DURATION); // plafond par défaut tant que la vraie durée n'est pas connue
+    setPaused(false);
 
     if (!isOwn) {
       api.post(`/statuses/${current.id}/view`).catch(() => {});
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupIndex, statusIndex]);
 
-    if (!showComments) {
+  useEffect(() => {
+    if (showComments || paused) {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(next, DURATION);
+      return;
     }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(next, DURATION);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupIndex, statusIndex, showComments]);
+  }, [groupIndex, statusIndex, showComments, paused, DURATION]);
+
+  // Quand la vraie durée de la vidéo est connue, on la plafonne à 1 min 30
+  function handleVideoLoadedMetadata() {
+    if (!videoRef.current) return;
+    const realDurationMs = videoRef.current.duration * 1000;
+    setVideoDuration(Math.min(realDurationMs, MAX_VIDEO_DURATION));
+  }
 
   function next() {
     if (!group) return;
@@ -125,8 +156,8 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
 
   if (!group || !current) return null;
 
-  return (
-    <div className="call-overlay" style={{ padding: 0 }}>
+  const content = (
+    <div className="call-overlay" style={{ padding: 0, zIndex: 200 }}>
       <div style={{ width: '100%', maxWidth: 480, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {/* Barres de progression */}
         <div style={{ display: 'flex', gap: 4, padding: '10px 12px 0' }}>
@@ -137,7 +168,7 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
                   height: '100%',
                   background: '#fff',
                   width: i < statusIndex ? '100%' : i === statusIndex ? '100%' : '0%',
-                  transition: i === statusIndex && !showComments ? `width ${DURATION}ms linear` : 'none',
+                  transition: i === statusIndex && !showComments && !paused ? `width ${DURATION}ms linear` : 'none',
                 }}
               />
             </div>
@@ -155,9 +186,7 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
           </div>
           <div style={{ flex: 1, color: '#fff' }}>
             <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{isOwn ? 'Mon statut' : group.user.username}</div>
-            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>
-              {new Date(current.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-            </div>
+            <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>{timeAgo(current.createdAt)}</div>
           </div>
           {isOwn && (
             <button className="btn btn-ghost btn-icon" style={{ color: '#fff' }} onClick={handleDelete} title="Supprimer">
@@ -177,6 +206,10 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
             if (x < width / 3) prev();
             else next();
           }}
+          onMouseDown={() => setPaused(true)}
+          onMouseUp={() => setPaused(false)}
+          onTouchStart={() => setPaused(true)}
+          onTouchEnd={() => setPaused(false)}
         >
           {current.type === 'text' && (
             <div
@@ -201,7 +234,15 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
             <img src={resolveFileUrl(current.fileUrl)} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           )}
           {current.type === 'video' && current.fileUrl && (
-            <video src={resolveFileUrl(current.fileUrl)} autoPlay style={{ maxWidth: '100%', maxHeight: '100%' }} />
+            <video
+              ref={videoRef}
+              src={resolveFileUrl(current.fileUrl)}
+              autoPlay
+              playsInline
+              onLoadedMetadata={handleVideoLoadedMetadata}
+              onEnded={next}
+              style={{ maxWidth: '100%', maxHeight: '100%' }}
+            />
           )}
 
           {/* Barre d'actions façon TikTok, à droite */}
@@ -311,4 +352,8 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
       )}
     </div>
   );
-}
+
+  // Portail : on sort du DOM de la sidebar pour échapper à son "sous-monde"
+  // d'empilement (z-index) et s'afficher vraiment par-dessus toute la page.
+  return createPortal(content, document.body);
+  }
