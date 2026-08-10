@@ -2,15 +2,25 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, MessageCircle, CircleDashed, Users, Bell, Clapperboard } from 'lucide-react';
 
+type ChatTab = 'chats' | 'status' | 'friends' | 'requests';
+
 interface Props {
-  active: 'home' | 'chats' | 'status' | 'friends' | 'requests' | 'videos';
+  active: 'home' | ChatTab | 'videos';
   showVideo?: boolean;
+  // Si fourni, les onglets Discussions/Statuts/Amis/Notifications changent le
+  // contenu sur place (utilisé sur la page Discussions elle-même) au lieu de
+  // naviguer vers une autre page.
+  onNavigateTab?: (tab: ChatTab) => void;
 }
 
-export default function BottomNav({ active, showVideo }: Props) {
+export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
   const navigate = useNavigate();
 
-  const goToChatTab = (tab: 'chats' | 'status' | 'friends' | 'requests') => {
+  const goToChatTab = (tab: ChatTab) => {
+    if (onNavigateTab) {
+      onNavigateTab(tab);
+      return;
+    }
     if (tab === 'chats') {
       navigate('/');
     } else {
