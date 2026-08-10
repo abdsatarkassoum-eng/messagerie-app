@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import api from '../services/api';
 import { StatusGroup, UserProfile, PostComment as StatusCommentType } from '../types';
 import { resolveFileUrl } from '../utils/url';
-import { Heart, MessageCircle, Send, X, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Send, X, Trash2, Eye } from 'lucide-react';
 
 interface Props {
   allGroups: StatusGroup[];
@@ -14,7 +14,7 @@ interface Props {
 }
 
 const TEXT_IMAGE_DURATION = 5000;
-const MAX_VIDEO_DURATION = 90000; // 1 min 30, plafond demandé
+const MAX_VIDEO_DURATION = 90000;
 
 function timeAgo(dateStr: string) {
   const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -53,7 +53,7 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
     setLikesCount(current.likesCount);
     setCommentsLoaded(false);
     setComments([]);
-    setVideoDuration(MAX_VIDEO_DURATION); // plafond par défaut tant que la vraie durée n'est pas connue
+    setVideoDuration(MAX_VIDEO_DURATION);
     setPaused(false);
 
     if (!isOwn) {
@@ -75,7 +75,6 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupIndex, statusIndex, showComments, paused, DURATION]);
 
-  // Quand la vraie durée de la vidéo est connue, on la plafonne à 1 min 30
   function handleVideoLoadedMetadata() {
     if (!videoRef.current) return;
     const realDurationMs = videoRef.current.duration * 1000;
@@ -159,7 +158,6 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
   const content = (
     <div className="call-overlay" style={{ padding: 0, zIndex: 200 }}>
       <div style={{ width: '100%', maxWidth: 480, height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* Barres de progression */}
         <div style={{ display: 'flex', gap: 4, padding: '10px 12px 0' }}>
           {group.statuses.map((s, i) => (
             <div key={s.id} style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.3)', borderRadius: 2, overflow: 'hidden' }}>
@@ -175,7 +173,6 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
           ))}
         </div>
 
-        {/* En-tête */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
           <div className="avatar" style={{ width: 36, height: 36 }}>
             {group.user.avatarUrl ? (
@@ -196,7 +193,6 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
           <button className="btn btn-ghost btn-icon" style={{ color: '#fff' }} onClick={onClose}><X size={18} /></button>
         </div>
 
-        {/* Contenu */}
         <div
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}
           onClick={(e) => {
@@ -245,8 +241,21 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
             />
           )}
 
-          {/* Barre d'actions façon TikTok, à droite */}
+          {/* Barre d'actions façon TikTok, à droite : voir qui a consulté (si moi), like, commentaires */}
           <div style={{ position: 'absolute', right: 10, bottom: 90, display: 'flex', flexDirection: 'column', gap: 18, alignItems: 'center' }}>
+            {isOwn && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  loadViewers();
+                }}
+                style={{ background: 'none', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}
+                title="Voir qui a consulté"
+              >
+                <Eye size={26} />
+                <span style={{ fontSize: '0.72rem' }}>{viewers.length > 0 ? viewers.length : ''}</span>
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -274,17 +283,6 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
           <div style={{ color: '#fff', padding: '10px 16px', textAlign: 'center' }}>{current.content}</div>
         )}
 
-        {isOwn && (
-          <button
-            className="btn btn-ghost"
-            style={{ color: '#fff', margin: '0 16px 16px' }}
-            onClick={loadViewers}
-          >
-            👁️ Voir qui a consulté
-          </button>
-        )}
-
-        {/* Panneau de commentaires (façon TikTok, en bas) */}
         {showComments && (
           <div
             style={{
@@ -353,7 +351,5 @@ export default function StatusViewer({ allGroups, startGroupIndex, viewerId, onC
     </div>
   );
 
-  // Portail : on sort du DOM de la sidebar pour échapper à son "sous-monde"
-  // d'empilement (z-index) et s'afficher vraiment par-dessus toute la page.
   return createPortal(content, document.body);
-  }
+      }
