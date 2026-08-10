@@ -10,12 +10,15 @@ import CallModal, { CallSession } from '../components/CallModal';
 import TopNav from '../components/TopNav';
 import BottomNav from '../components/BottomNav';
 
+type Tab = 'chats' | 'friends' | 'requests' | 'status';
+
 export default function Chat() {
   const { user } = useAuth();
   const socket = useSocket();
   const location = useLocation();
-  const requestedTab = (location.state as any)?.tab as 'chats' | 'friends' | 'requests' | 'status' | undefined;
+  const requestedTab = (location.state as any)?.tab as Tab | undefined;
 
+  const [tab, setTab] = useState<Tab>(requestedTab || 'chats');
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -192,7 +195,7 @@ export default function Chat() {
             onGroupCreated={handleGroupCreated}
             friends={friends}
             refreshFriends={loadFriends}
-            initialTab={requestedTab}
+            tab={tab}
           />
         </div>
 
@@ -226,7 +229,7 @@ export default function Chat() {
         )}
       </div>
 
-      {!mobileShowChat && <BottomNav active="chats" />}
+      {!mobileShowChat && <BottomNav active={tab} onNavigateTab={setTab} />}
     </div>
   );
-                 }
+        }
