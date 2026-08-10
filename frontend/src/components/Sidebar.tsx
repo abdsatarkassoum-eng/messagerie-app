@@ -22,7 +22,6 @@ interface Props {
   friends: UserProfile[];
   refreshFriends: () => void;
   tab: Tab;
-  onNotificationsChange?: (unreadCount: number, requestsCount: number) => void;
 }
 
 function AvatarCircle({
@@ -74,7 +73,6 @@ export default function Sidebar({
   friends,
   refreshFriends,
   tab,
-  onNotificationsChange,
 }: Props) {
   const { user } = useAuth();
   const socket = useSocket();
@@ -105,12 +103,6 @@ export default function Sidebar({
       socket.off('notification:new', handleNew);
     };
   }, [socket]);
-
-  useEffect(() => {
-    const unread = notifications.filter((n) => !n.read).length;
-    onNotificationsChange?.(unread, requests.length);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notifications, requests]);
 
   useEffect(() => {
     if (tab === 'requests') {
@@ -192,6 +184,10 @@ export default function Sidebar({
           ))}
         </div>
       )}
+
+      {/* StatusList a son propre affichage/défilement — il ne doit PAS être
+          à l'intérieur du bloc ci-dessous, sinon il hérite de son display:none */}
+      {tab === 'status' && <StatusList />}
 
       <div style={{ flex: 1, overflowY: 'auto', display: tab === 'status' ? 'none' : 'block' }}>
         {tab === 'chats' &&
@@ -358,8 +354,6 @@ export default function Sidebar({
             )}
           </div>
         )}
-
-        {tab === 'status' && <StatusList />}
       </div>
 
       {user?.isAdmin && (
@@ -380,4 +374,4 @@ export default function Sidebar({
       )}
     </div>
   );
-      }
+  }
