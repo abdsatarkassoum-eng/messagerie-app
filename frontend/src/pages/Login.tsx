@@ -55,7 +55,7 @@ export default function LoginPage() {
       setLoading(true);
       const res = await api.post("/auth/google", { credential: response.credential });
       loginWithToken(res.data.token, res.data.user);
-      navigate("/");
+      navigate("/feed");
     } catch (err: any) {
       const message =
         err?.response?.data?.message || "Connexion avec Google impossible.";
@@ -85,7 +85,7 @@ export default function LoginPage() {
     try {
       setLoading(true);
       await login(email, password);
-      navigate("/");
+      navigate("/feed");
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -165,4 +165,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+      }
