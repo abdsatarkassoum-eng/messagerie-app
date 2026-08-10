@@ -8,7 +8,7 @@ import NewGroupModal from './NewGroupModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { MessageCircle, CircleDashed, Users, Bell, Plus, Home, Check, CheckCheck, PhoneMissed } from 'lucide-react';
+import { Plus, Check, CheckCheck, PhoneMissed } from 'lucide-react';
 
 type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
@@ -21,7 +21,8 @@ interface Props {
   onGroupCreated: (conversationId: string) => void;
   friends: UserProfile[];
   refreshFriends: () => void;
-  initialTab?: Tab;
+  tab: Tab;
+  onNotificationsChange?: (unreadCount: number, requestsCount: number) => void;
 }
 
 function AvatarCircle({
@@ -72,12 +73,12 @@ export default function Sidebar({
   onGroupCreated,
   friends,
   refreshFriends,
-  initialTab,
+  tab,
+  onNotificationsChange,
 }: Props) {
   const { user } = useAuth();
   const socket = useSocket();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>(initialTab || 'chats');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
@@ -91,6 +92,7 @@ export default function Sidebar({
 
   useEffect(() => {
     loadNotifications();
+    loadRequests();
   }, []);
 
   useEffect(() => {
@@ -105,8 +107,13 @@ export default function Sidebar({
   }, [socket]);
 
   useEffect(() => {
+    const unread = notifications.filter((n) => !n.read).length;
+    onNotificationsChange?.(unread, requests.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications, requests]);
+
+  useEffect(() => {
     if (tab === 'requests') {
-      loadRequests();
       const hasUnread = notifications.some((n) => !n.read);
       if (hasUnread) {
         api.post('/notifications/read-all').catch(() => {});
@@ -151,12 +158,8 @@ export default function Sidebar({
   const openNotification = (n: NotificationItem) => {
     if (n.conversationId) {
       onSelectConversation(n.conversationId);
-      setTab('chats');
     }
   };
-
-  const unreadNotifCount = notifications.filter((n) => !n.read).length;
-  const bellBadgeCount = requests.length + unreadNotifCount;
 
   return (
     <div className="sidebar">
@@ -167,7 +170,7 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div style={{ padding: '12px 16px 0' }}>
+      <div style={{ padding: '12px 16px' }}>
         <input
           className="field"
           placeholder="Rechercher des personnes…"
@@ -189,27 +192,6 @@ export default function Sidebar({
           ))}
         </div>
       )}
-
-      <div className="tabs" style={{ justifyContent: 'space-around', padding: '0 4px' }}>
-        <div className="tab" onClick={() => navigate('/feed')} title="Accueil / Fil d'actualité" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <Home size={18} />
-        </div>
-        <div className={`tab ${tab === 'chats' ? 'active' : ''}`} onClick={() => setTab('chats')} title="Discussions" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <MessageCircle size={18} />
-        </div>
-        <div className={`tab ${tab === 'status' ? 'active' : ''}`} onClick={() => setTab('status')} title="Statuts" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <CircleDashed size={18} />
-        </div>
-        <div className={`tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')} title="Amis" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-          <Users size={18} />
-        </div>
-        <div className={`tab ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')} title="Notifications" style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-          <Bell size={18} />
-          {bellBadgeCount > 0 && <span className="badge" style={{ position: 'absolute', top: 2, right: 14, minWidth: 16, height: 16, fontSize: '0.62rem' }}>{bellBadgeCount > 9 ? '9+' : bellBadgeCount}</span>}
-        </div>
-      </div>
-
-      {tab === 'status' && <StatusList />}
 
       <div style={{ flex: 1, overflowY: 'auto', display: tab === 'status' ? 'none' : 'block' }}>
         {tab === 'chats' &&
@@ -376,6 +358,8 @@ export default function Sidebar({
             )}
           </div>
         )}
+
+        {tab === 'status' && <StatusList />}
       </div>
 
       {user?.isAdmin && (
@@ -396,4 +380,4 @@ export default function Sidebar({
       )}
     </div>
   );
-        }
+                                   }
