@@ -74,6 +74,8 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetToken" VARCHAR(255)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetTokenExpiry" TIMESTAMP WITH TIME ZONE`,
       `ALTER TABLE users ALTER COLUMN password DROP NOT NULL`,
+      `ALTER TABLE statuses ADD COLUMN IF NOT EXISTS "trimStart" FLOAT`,
+      `ALTER TABLE statuses ADD COLUMN IF NOT EXISTS "trimEnd" FLOAT`,
     ];
 
     for (const query of migrations) {
