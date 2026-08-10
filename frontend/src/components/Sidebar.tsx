@@ -1,13 +1,14 @@
- import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ConversationSummary, FriendRequestItem, UserProfile } from '../types';
+import { useSocket } from '../context/SocketContext';
+import { ConversationSummary, FriendRequestItem, NotificationItem, UserProfile } from '../types';
 import NewGroupModal from './NewGroupModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { MessageCircle, CircleDashed, Users, Bell, Plus, Home, Check, CheckCheck } from 'lucide-react';
+import { MessageCircle, CircleDashed, Users, Bell, Plus, Home, Check, CheckCheck, PhoneMissed } from 'lucide-react';
 
 type Tab = 'chats' | 'friends' | 'requests' | 'status';
 
@@ -50,6 +51,17 @@ function AvatarCircle({
   );
 }
 
+function timeAgo(dateStr: string) {
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'à l\'instant';
+  if (mins < 60) return `il y a ${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `il y a ${days} j`;
+}
+
 export default function Sidebar({
   conversations,
   activeConversationId,
@@ -61,15 +73,48 @@ export default function Sidebar({
   refreshFriends,
 }: Props) {
   const { user } = useAuth();
+  const socket = useSocket();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('chats');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
 
+  const loadNotifications = async () => {
+    const res = await api.get('/notifications');
+    setNotifications(res.data.notifications);
+  };
+
+  // Charge les notifications dès l'ouverture (pas seulement quand on ouvre l'onglet),
+  // pour que le badge soit correct dès le départ.
   useEffect(() => {
-    if (tab === 'requests') loadRequests();
+    loadNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleNew = (n: NotificationItem) => {
+      setNotifications((prev) => [n, ...prev]);
+    };
+    socket.on('notification:new', handleNew);
+    return () => {
+      socket.off('notification:new', handleNew);
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    if (tab === 'requests') {
+      loadRequests();
+      // Marque tout comme lu dès l'ouverture de l'onglet
+      const hasUnread = notifications.some((n) => !n.read);
+      if (hasUnread) {
+        api.post('/notifications/read-all').catch(() => {});
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
   useEffect(() => {
@@ -103,6 +148,16 @@ export default function Sidebar({
     setRequests((prev) => prev.filter((r) => r.id !== requestId));
     refreshFriends();
   };
+
+  const openNotification = (n: NotificationItem) => {
+    if (n.conversationId) {
+      onSelectConversation(n.conversationId);
+      setTab('chats');
+    }
+  };
+
+  const unreadNotifCount = notifications.filter((n) => !n.read).length;
+  const bellBadgeCount = requests.length + unreadNotifCount;
 
   return (
     <div className="sidebar">
@@ -149,9 +204,9 @@ export default function Sidebar({
         <div className={`tab ${tab === 'friends' ? 'active' : ''}`} onClick={() => setTab('friends')} title="Amis" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <Users size={18} />
         </div>
-        <div className={`tab ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')} title="Demandes" style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
+        <div className={`tab ${tab === 'requests' ? 'active' : ''}`} onClick={() => setTab('requests')} title="Notifications" style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
           <Bell size={18} />
-          {requests.length > 0 && <span className="badge" style={{ position: 'absolute', top: 2, right: 14, minWidth: 16, height: 16, fontSize: '0.62rem' }}>{requests.length}</span>}
+          {bellBadgeCount > 0 && <span className="badge" style={{ position: 'absolute', top: 2, right: 14, minWidth: 16, height: 16, fontSize: '0.62rem' }}>{bellBadgeCount > 9 ? '9+' : bellBadgeCount}</span>}
         </div>
       </div>
 
@@ -253,23 +308,75 @@ export default function Sidebar({
             ))
           ))}
 
-        {tab === 'requests' &&
-          (requests.length === 0 ? (
-            <p style={{ padding: 20, color: 'var(--text-muted)', fontSize: '0.88rem' }}>Aucune demande en attente.</p>
-          ) : (
-            requests.map((r) => (
-              <div key={r.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                  <AvatarCircle url={r.sender.avatarUrl} name={r.sender.username} size={36} />
-                  <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.sender.username}</span>
+        {tab === 'requests' && (
+          <div>
+            {requests.length === 0 && notifications.length === 0 && (
+              <p style={{ padding: 20, color: 'var(--text-muted)', fontSize: '0.88rem' }}>Rien à signaler pour l'instant.</p>
+            )}
+
+            {requests.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 4px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Demandes d'amis
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-primary" style={{ flex: 1, padding: '6px' }} onClick={() => respond(r.id, 'accept')}>Accepter</button>
-                  <button className="btn btn-secondary" style={{ flex: 1, padding: '6px' }} onClick={() => respond(r.id, 'reject')}>Refuser</button>
+                {requests.map((r) => (
+                  <div key={r.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <AvatarCircle url={r.sender.avatarUrl} name={r.sender.username} size={36} />
+                      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.sender.username}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-primary" style={{ flex: 1, padding: '6px' }} onClick={() => respond(r.id, 'accept')}>Accepter</button>
+                      <button className="btn btn-secondary" style={{ flex: 1, padding: '6px' }} onClick={() => respond(r.id, 'reject')}>Refuser</button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {notifications.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 4px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Notifications
                 </div>
-              </div>
-            ))
-          ))}
+                {notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className="conversation-item"
+                    style={{ cursor: n.conversationId ? 'pointer' : 'default', opacity: n.read ? 0.7 : 1 }}
+                    onClick={() => openNotification(n)}
+                  >
+                    {n.type === 'missed_call' ? (
+                      <div
+                        style={{
+                          width: 42,
+                          height: 42,
+                          borderRadius: 999,
+                          background: 'rgba(211, 47, 47, 0.12)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <PhoneMissed size={18} color="#c62828" />
+                      </div>
+                    ) : (
+                      <AvatarCircle url={n.fromUser?.avatarUrl} name={n.fromUser?.username || n.title} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: n.read ? 500 : 700, fontSize: '0.9rem' }}>{n.title}</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {n.body}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>{timeAgo(n.createdAt)}</div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {user?.isAdmin && (
@@ -290,4 +397,4 @@ export default function Sidebar({
       )}
     </div>
   );
-                               }
+}
