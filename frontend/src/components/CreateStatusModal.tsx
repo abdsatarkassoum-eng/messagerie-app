@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import api from '../services/api';
 
 interface Props {
@@ -7,15 +7,68 @@ interface Props {
 }
 
 const COLORS = ['#1f7a6c', '#ff6b4a', '#2b3a55', '#7a3b8f', '#c2410c', '#0e7490'];
+const MAX_TRIM_SECONDS = 90;
+
+function formatTime(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 export default function CreateStatusModal({ onClose, onCreated }: Props) {
   const [tab, setTab] = useState<'text' | 'media'>('text');
   const [text, setText] = useState('');
   const [color, setColor] = useState(COLORS[0]);
   const [file, setFile] = useState<File | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [isVideo, setIsVideo] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [trimStart, setTrimStart] = useState(0);
+  const [trimEnd, setTrimEnd] = useState(0);
   const [caption, setCaption] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    if (fileUrl) URL.revokeObjectURL(fileUrl);
+    if (f) {
+      setFileUrl(URL.createObjectURL(f));
+      setIsVideo(f.type.startsWith('video/'));
+    } else {
+      setFileUrl(null);
+      setIsVideo(false);
+    }
+  };
+
+  const handleVideoLoadedMetadata = () => {
+    if (!videoRef.current) return;
+    const duration = videoRef.current.duration;
+    setVideoDuration(duration);
+    setTrimStart(0);
+    setTrimEnd(Math.min(duration, MAX_TRIM_SECONDS));
+  };
+
+  const handleTrimStartChange = (value: number) => {
+    const newStart = Math.min(value, trimEnd - 1);
+    setTrimStart(newStart);
+    // Ne dépasse jamais 1 min 30 de sélection
+    if (trimEnd - newStart > MAX_TRIM_SECONDS) {
+      setTrimEnd(newStart + MAX_TRIM_SECONDS);
+    }
+    if (videoRef.current) videoRef.current.currentTime = newStart;
+  };
+
+  const handleTrimEndChange = (value: number) => {
+    let newEnd = Math.max(value, trimStart + 1);
+    if (newEnd - trimStart > MAX_TRIM_SECONDS) {
+      newEnd = trimStart + MAX_TRIM_SECONDS;
+    }
+    setTrimEnd(newEnd);
+    if (videoRef.current) videoRef.current.currentTime = newEnd;
+  };
 
   const submit = async () => {
     setError('');
@@ -36,6 +89,10 @@ export default function CreateStatusModal({ onClose, onCreated }: Props) {
         const formData = new FormData();
         formData.append('file', file as File);
         if (caption.trim()) formData.append('content', caption.trim());
+        if (isVideo) {
+          formData.append('trimStart', String(trimStart));
+          formData.append('trimEnd', String(trimEnd));
+        }
         await api.post('/statuses', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       onCreated();
@@ -112,14 +169,58 @@ export default function CreateStatusModal({ onClose, onCreated }: Props) {
             <input
               type="file"
               accept="image/*,video/*"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={handleFileChange}
               style={{ marginBottom: 14 }}
             />
-            {file && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-                Sélectionné : {file.name}
-              </p>
+
+            {fileUrl && isVideo && (
+              <div style={{ marginBottom: 14 }}>
+                <video
+                  ref={videoRef}
+                  src={fileUrl}
+                  controls
+                  onLoadedMetadata={handleVideoLoadedMetadata}
+                  style={{ width: '100%', borderRadius: 12, marginBottom: 10, maxHeight: 220, background: '#000' }}
+                />
+                {videoDuration > 0 && (
+                  <>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0 0 6px' }}>
+                      Portion à publier : {formatTime(trimStart)} → {formatTime(trimEnd)}
+                      {' '}({formatTime(trimEnd - trimStart)}, max 1:30)
+                    </p>
+                    <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
+                      Début
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={videoDuration}
+                      step={0.1}
+                      value={trimStart}
+                      onChange={(e) => handleTrimStartChange(parseFloat(e.target.value))}
+                      style={{ width: '100%', marginBottom: 8 }}
+                    />
+                    <label style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
+                      Fin
+                    </label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={videoDuration}
+                      step={0.1}
+                      value={trimEnd}
+                      onChange={(e) => handleTrimEndChange(parseFloat(e.target.value))}
+                      style={{ width: '100%', marginBottom: 14 }}
+                    />
+                  </>
+                )}
+              </div>
             )}
+
+            {fileUrl && !isVideo && (
+              <img src={fileUrl} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 12, marginBottom: 14 }} />
+            )}
+
             <input
               className="field"
               placeholder="Légende (optionnel)"
@@ -139,4 +240,4 @@ export default function CreateStatusModal({ onClose, onCreated }: Props) {
       </div>
     </div>
   );
-  }
+      }
