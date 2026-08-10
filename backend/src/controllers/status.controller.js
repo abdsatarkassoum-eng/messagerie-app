@@ -1,9 +1,10 @@
- const { Op } = require('sequelize');
+const { Op } = require('sequelize');
 const { Status, StatusView, StatusLike, StatusComment, User, Friendship } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
 
-const STATUS_LIFETIME_MS = 24 * 60 * 60 * 1000; // 24 heures
+const STATUS_LIFETIME_MS = 24 * 60 * 60 * 1000;
+const MAX_TRIM_SECONDS = 90; // 1 min 30, plafond aligné avec la lecture
 
 async function getFriendIds(userId) {
   const friendships = await Friendship.findAll({
@@ -12,16 +13,27 @@ async function getFriendIds(userId) {
   return friendships.map((f) => (f.userAId === userId ? f.userBId : f.userAId));
 }
 
-// POST /api/statuses { type, content, backgroundColor }
+// POST /api/statuses { type, content, backgroundColor, trimStart, trimEnd }
 async function createStatus(req, res) {
   try {
-    let { type, content, backgroundColor } = req.body;
+    let { type, content, backgroundColor, trimStart, trimEnd } = req.body;
     let fileUrl = null;
+    let finalTrimStart = null;
+    let finalTrimEnd = null;
 
     if (req.file) {
       const folder = req.file.mimetype.startsWith('video/') ? 'videos' : 'images';
       fileUrl = await uploadFile(req.file, folder);
       type = folder === 'videos' ? 'video' : 'image';
+
+      if (type === 'video') {
+        const start = parseFloat(trimStart);
+        const end = parseFloat(trimEnd);
+        if (!isNaN(start) && !isNaN(end) && end > start) {
+          finalTrimStart = Math.max(0, start);
+          finalTrimEnd = Math.min(end, finalTrimStart + MAX_TRIM_SECONDS);
+        }
+      }
     } else {
       type = 'text';
       if (!content || !content.trim()) {
@@ -35,6 +47,8 @@ async function createStatus(req, res) {
       content: content || null,
       fileUrl,
       backgroundColor: backgroundColor || null,
+      trimStart: finalTrimStart,
+      trimEnd: finalTrimEnd,
       expiresAt: new Date(Date.now() + STATUS_LIFETIME_MS),
     });
 
@@ -49,7 +63,7 @@ async function createStatus(req, res) {
   }
 }
 
-// GET /api/statuses — statuts de l'utilisateur + de ses amis, groupés par personne
+// GET /api/statuses
 async function listStatuses(req, res) {
   try {
     const userId = req.user.id;
@@ -100,6 +114,8 @@ async function listStatuses(req, res) {
         content: s.content,
         fileUrl: s.fileUrl,
         backgroundColor: s.backgroundColor,
+        trimStart: s.trimStart,
+        trimEnd: s.trimEnd,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
         viewed,
@@ -122,7 +138,6 @@ async function listStatuses(req, res) {
   }
 }
 
-// POST /api/statuses/:id/view
 async function viewStatus(req, res) {
   try {
     const status = await Status.findByPk(req.params.id);
@@ -146,7 +161,6 @@ async function viewStatus(req, res) {
   }
 }
 
-// GET /api/statuses/:id/viewers — uniquement pour le propriétaire du statut
 async function getViewers(req, res) {
   try {
     const status = await Status.findByPk(req.params.id);
@@ -167,7 +181,6 @@ async function getViewers(req, res) {
   }
 }
 
-// DELETE /api/statuses/:id
 async function deleteStatus(req, res) {
   try {
     const status = await Status.findByPk(req.params.id);
@@ -187,7 +200,6 @@ async function deleteStatus(req, res) {
   }
 }
 
-// POST /api/statuses/:id/like — bascule j'aime / je n'aime plus
 async function toggleStatusLike(req, res) {
   try {
     const status = await Status.findByPk(req.params.id);
@@ -214,7 +226,6 @@ async function toggleStatusLike(req, res) {
   }
 }
 
-// GET /api/statuses/:id/comments
 async function listStatusComments(req, res) {
   try {
     const comments = await StatusComment.findAll({
@@ -239,7 +250,6 @@ async function listStatusComments(req, res) {
   }
 }
 
-// POST /api/statuses/:id/comments { content }
 async function addStatusComment(req, res) {
   try {
     const { content } = req.body;
