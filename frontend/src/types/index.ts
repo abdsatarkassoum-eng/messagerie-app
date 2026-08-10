@@ -80,6 +80,8 @@ export interface StatusItem {
   content: string | null;
   fileUrl: string | null;
   backgroundColor: string | null;
+  trimStart?: number | null;
+  trimEnd?: number | null;
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
