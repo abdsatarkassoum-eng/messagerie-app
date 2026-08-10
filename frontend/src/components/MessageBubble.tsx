@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Message } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { useAuth } from '../context/AuthContext';
-import { Download, Play } from 'lucide-react';
+import { Download, Play, Phone, Video, PhoneMissed, PhoneOff } from 'lucide-react';
 
 interface Props {
   message: Message;
@@ -10,9 +10,71 @@ interface Props {
   showSender: boolean;
 }
 
+function formatDuration(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function CallSystemMessage({ message, isMine }: { message: Message; isMine: boolean }) {
+  let data: { kind?: string; callType?: 'audio' | 'video'; outcome?: string; durationSeconds?: number } = {};
+  try {
+    data = JSON.parse(message.content || '{}');
+  } catch {
+    data = {};
+  }
+  if (data.kind !== 'call') return null;
+
+  const isVideo = data.callType === 'video';
+  const isMissedOrDeclined = data.outcome === 'missed' || data.outcome === 'declined';
+
+  const Icon = isMissedOrDeclined ? PhoneMissed : isVideo ? Video : Phone;
+
+  let label: string;
+  if (data.outcome === 'completed') {
+    label = `${isVideo ? 'Appel vidéo' : 'Appel audio'} · ${formatDuration(data.durationSeconds || 0)}`;
+  } else if (data.outcome === 'declined') {
+    label = `${isVideo ? 'Appel vidéo' : 'Appel audio'} refusé`;
+  } else {
+    label = `${isVideo ? 'Appel vidéo' : 'Appel audio'} manqué`;
+  }
+
+  const time = new Date(message.createdAt).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 14px',
+          borderRadius: 999,
+          background: isMissedOrDeclined ? 'rgba(211, 47, 47, 0.1)' : 'var(--bg-sunken)',
+          color: isMissedOrDeclined ? '#c62828' : 'var(--text-muted)',
+          fontSize: '0.82rem',
+          fontWeight: 600,
+        }}
+      >
+        <Icon size={15} />
+        <span>{isMine ? label : `${label}`}</span>
+        <span style={{ opacity: 0.6, fontWeight: 400 }}>· {time}</span>
+      </div>
+    </div>
+  );
+}
+
 export default function MessageBubble({ message, isMine, showSender }: Props) {
   const { user } = useAuth();
   const [revealed, setRevealed] = useState(false);
+
+  // Message système "appel" : affichage spécial centré, pas une bulle classique
+  if (message.type === 'system') {
+    return <CallSystemMessage message={message} isMine={isMine} />;
+  }
 
   const time = new Date(message.createdAt).toLocaleTimeString('fr-FR', {
     hour: '2-digit',
@@ -83,4 +145,4 @@ export default function MessageBubble({ message, isMine, showSender }: Props) {
       </div>
     </div>
   );
-}
+                  }
