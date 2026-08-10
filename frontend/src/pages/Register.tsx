@@ -56,7 +56,7 @@ export default function SignupPage() {
       setLoading(true);
       const res = await api.post("/auth/google", { credential: response.credential });
       loginWithToken(res.data.token, res.data.user);
-      navigate("/");
+      navigate("/feed");
     } catch (err: any) {
       const message =
         err?.response?.data?.message || "Connexion avec Google impossible.";
@@ -96,7 +96,7 @@ export default function SignupPage() {
       const token = res.data?.token;
       if (token) {
         loginWithToken(token, res.data.user);
-        navigate("/");
+        navigate("/feed");
       } else {
         navigate("/login");
       }
@@ -181,4 +181,4 @@ export default function SignupPage() {
       </div>
     </div>
   );
-               }
+}
