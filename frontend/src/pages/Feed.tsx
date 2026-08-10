@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import TopNav from '../components/TopNav';
+import BottomNav from '../components/BottomNav';
 import CreatePostBox from '../components/CreatePostBox';
 import PostCard from '../components/PostCard';
 import { PostItem, UserProfile } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { ArrowLeft, Clapperboard } from 'lucide-react';
 
 export default function Feed() {
   const navigate = useNavigate();
@@ -34,18 +34,9 @@ export default function Feed() {
   };
 
   return (
-    <div className="app-root">
+    <div className="app-root" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopNav />
-      <div style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', height: 'calc(100dvh - 58px)', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <button className="btn btn-ghost" onClick={() => navigate('/')}>
-            <ArrowLeft size={16} /> Retour aux discussions
-          </button>
-          <button className="btn btn-secondary" onClick={() => navigate('/videos')}>
-            <Clapperboard size={16} /> Vidéos
-          </button>
-        </div>
-
+      <div style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, minHeight: 0, boxSizing: 'border-box' }}>
         {suggestions.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Suggestions pour vous</h3>
@@ -99,6 +90,7 @@ export default function Feed() {
           <PostCard key={p.id} post={p} onDeleted={(id: string) => setPosts((prev) => prev.filter((x) => x.id !== id))} />
         ))}
       </div>
+      <BottomNav active="home" showVideo />
     </div>
   );
-}
+          }
