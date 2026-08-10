@@ -14,9 +14,12 @@ const Status = sequelize.define(
       type: DataTypes.ENUM('text', 'image', 'video'),
       defaultValue: 'text',
     },
-    content: { type: DataTypes.TEXT, allowNull: true }, // texte du statut ou légende
+    content: { type: DataTypes.TEXT, allowNull: true },
     fileUrl: { type: DataTypes.STRING, allowNull: true },
-    backgroundColor: { type: DataTypes.STRING, allowNull: true }, // pour les statuts texte
+    backgroundColor: { type: DataTypes.STRING, allowNull: true },
+    // Portion de la vidéo à lire, en secondes (uniquement pour type = 'video')
+    trimStart: { type: DataTypes.FLOAT, allowNull: true },
+    trimEnd: { type: DataTypes.FLOAT, allowNull: true },
     expiresAt: { type: DataTypes.DATE, allowNull: false },
   },
   {
