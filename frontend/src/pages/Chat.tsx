@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import CallModal, { CallSession } from '../components/CallModal';
 import TopNav from '../components/TopNav';
+import BottomNav from '../components/BottomNav';
 
 export default function Chat() {
   const { user } = useAuth();
@@ -178,9 +179,9 @@ export default function Chat() {
   };
 
   return (
-    <div className="app-root" style={{ height: '100dvh' }}>
+    <div className="app-root" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopNav />
-      <div className="app-shell" style={{ height: 'calc(100dvh - 58px)', minHeight: 0 }}>
+      <div className="app-shell" style={{ height: 'calc(100dvh - 58px)', minHeight: 0, flex: 1 }}>
         <div className={mobileShowChat ? 'sidebar hidden-mobile' : 'sidebar'} style={{ minHeight: 0 }}>
           <Sidebar
             conversations={conversations}
@@ -224,6 +225,8 @@ export default function Chat() {
           <CallModal socket={socket} session={callSession} onClose={() => setCallSession(null)} />
         )}
       </div>
+
+      {!mobileShowChat && <BottomNav active="chats" />}
     </div>
   );
-            }
+                 }
