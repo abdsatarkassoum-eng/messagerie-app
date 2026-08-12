@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
-import { ConversationSummary, FriendRequestItem, NotificationItem, UserProfile } from '../types';
+import { useNotifications } from '../context/NotificationsContext';
+import { ConversationSummary, FriendRequestItem, UserProfile } from '../types';
 import NewGroupModal from './NewGroupModal';
 import StatusList from './StatusList';
 import { resolveFileUrl } from '../utils/url';
@@ -75,42 +75,27 @@ export default function Sidebar({
   tab,
 }: Props) {
   const { user } = useAuth();
-  const socket = useSocket();
   const navigate = useNavigate();
+  const { notifications, markAllNotificationsRead, setRequestsCount } = useNotifications();
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
 
-  const loadNotifications = async () => {
-    const res = await api.get('/notifications');
-    setNotifications(res.data.notifications);
+  const loadRequests = async () => {
+    const res = await api.get('/friends/requests');
+    setRequests(res.data.received);
+    setRequestsCount(res.data.received.length);
   };
 
   useEffect(() => {
-    loadNotifications();
     loadRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!socket) return;
-    const handleNew = (n: NotificationItem) => {
-      setNotifications((prev) => [n, ...prev]);
-    };
-    socket.on('notification:new', handleNew);
-    return () => {
-      socket.off('notification:new', handleNew);
-    };
-  }, [socket]);
-
-  useEffect(() => {
     if (tab === 'requests') {
-      const hasUnread = notifications.some((n) => !n.read);
-      if (hasUnread) {
-        api.post('/notifications/read-all').catch(() => {});
-        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      }
+      markAllNotificationsRead();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
@@ -127,11 +112,6 @@ export default function Sidebar({
     return () => clearTimeout(timeout);
   }, [search]);
 
-  const loadRequests = async () => {
-    const res = await api.get('/friends/requests');
-    setRequests(res.data.received);
-  };
-
   const sendFriendRequest = async (receiverId: string) => {
     try {
       await api.post('/friends/request', { receiverId });
@@ -143,11 +123,15 @@ export default function Sidebar({
 
   const respond = async (requestId: string, action: 'accept' | 'reject') => {
     await api.post('/friends/respond', { requestId, action });
-    setRequests((prev) => prev.filter((r) => r.id !== requestId));
+    setRequests((prev) => {
+      const updated = prev.filter((r) => r.id !== requestId);
+      setRequestsCount(updated.length);
+      return updated;
+    });
     refreshFriends();
   };
 
-  const openNotification = (n: NotificationItem) => {
+  const openNotification = (n: (typeof notifications)[number]) => {
     if (n.conversationId) {
       onSelectConversation(n.conversationId);
     }
@@ -185,8 +169,6 @@ export default function Sidebar({
         </div>
       )}
 
-      {/* StatusList a son propre affichage/défilement — il ne doit PAS être
-          à l'intérieur du bloc ci-dessous, sinon il hérite de son display:none */}
       {tab === 'status' && <StatusList />}
 
       <div style={{ flex: 1, overflowY: 'auto', display: tab === 'status' ? 'none' : 'block' }}>
@@ -374,4 +356,4 @@ export default function Sidebar({
       )}
     </div>
   );
-  }
+        }
