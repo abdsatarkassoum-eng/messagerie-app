@@ -40,6 +40,8 @@ async function sendMessage(req, res) {
       return res.status(400).json({ message: 'Le message ne peut pas être vide.' });
     }
 
+    // seenBy stocke désormais { userId: dateISO } au lieu d'une simple liste,
+    // pour connaître l'heure exacte de lecture (pas juste le fait d'avoir lu)
     const message = await Message.create({
       conversationId,
       senderId: req.user.id,
@@ -47,7 +49,7 @@ async function sendMessage(req, res) {
       content: content || null,
       fileUrl,
       fileName,
-      seenBy: JSON.stringify([req.user.id]),
+      seenBy: JSON.stringify({ [req.user.id]: new Date().toISOString() }),
     });
 
     const conversation = await Conversation.findByPk(conversationId);
@@ -63,15 +65,14 @@ async function sendMessage(req, res) {
       content: message.content,
       fileUrl: message.fileUrl,
       fileName: message.fileName,
+      seenBy: message.seenBy,
       createdAt: message.createdAt,
     };
 
     const io = req.app.get('io');
 
-    // Diffuser en temps réel à tous les membres de la conversation
     io?.to(`conversation:${conversationId}`).emit('message:new', payload);
 
-    // Notification (historique + push) aux autres membres de la conversation
     const otherMembers = await ConversationMember.findAll({
       where: { conversationId },
     });
@@ -128,9 +129,16 @@ async function markSeen(req, res) {
     const message = await Message.findByPk(req.params.id);
     if (!message) return res.status(404).json({ message: 'Message introuvable.' });
 
-    const seenBy = JSON.parse(message.seenBy || '[]');
-    if (!seenBy.includes(req.user.id)) {
-      seenBy.push(req.user.id);
+    let seenBy = {};
+    try {
+      seenBy = JSON.parse(message.seenBy || '{}');
+    } catch {
+      seenBy = {};
+    }
+
+    if (!seenBy[req.user.id]) {
+      const seenAt = new Date().toISOString();
+      seenBy[req.user.id] = seenAt;
       message.seenBy = JSON.stringify(seenBy);
       await message.save();
 
@@ -138,6 +146,7 @@ async function markSeen(req, res) {
         messageId: message.id,
         conversationId: message.conversationId,
         userId: req.user.id,
+        seenAt,
       });
     }
 
