@@ -94,7 +94,15 @@ export default function ChatWindow({
           const mineId = m.sender?.id || m.senderId;
           const isMine = !!mineId && !!user?.id && String(mineId) === String(user.id);
           const showSender = conversation.isGroup && (idx === 0 || messages[idx - 1].senderId !== m.senderId);
-          return <MessageBubble key={m.id} message={m} isMine={isMine} showSender={showSender} />;
+          return (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              isMine={isMine}
+              showSender={showSender}
+              otherUserId={other?.id}
+            />
+          );
         })}
         {typingUsers.length > 0 && (
           <div className="typing-indicator">
@@ -108,4 +116,4 @@ export default function ChatWindow({
       <MessageInput onSend={onSendText} onSendFile={onSendFile} onTyping={onTyping} />
     </div>
   );
-}
+      }
