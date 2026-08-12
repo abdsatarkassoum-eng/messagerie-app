@@ -1,20 +1,19 @@
-import React from 'react';
+ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, MessageCircle, CircleDashed, Users, Bell, Clapperboard } from 'lucide-react';
+import { useNotifications } from '../context/NotificationsContext';
 
 type ChatTab = 'chats' | 'status' | 'friends' | 'requests';
 
 interface Props {
   active: 'home' | ChatTab | 'videos';
   showVideo?: boolean;
-  // Si fourni, les onglets Discussions/Statuts/Amis/Notifications changent le
-  // contenu sur place (utilisé sur la page Discussions elle-même) au lieu de
-  // naviguer vers une autre page.
   onNavigateTab?: (tab: ChatTab) => void;
 }
 
 export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
   const navigate = useNavigate();
+  const { totalBadge } = useNotifications();
 
   const goToChatTab = (tab: ChatTab) => {
     if (onNavigateTab) {
@@ -51,8 +50,13 @@ export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
       <div className={`tab ${active === 'friends' ? 'active' : ''}`} onClick={() => goToChatTab('friends')} title="Amis" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
         <Users size={20} />
       </div>
-      <div className={`tab ${active === 'requests' ? 'active' : ''}`} onClick={() => goToChatTab('requests')} title="Notifications" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+      <div className={`tab ${active === 'requests' ? 'active' : ''}`} onClick={() => goToChatTab('requests')} title="Notifications" style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
         <Bell size={20} />
+        {totalBadge > 0 && (
+          <span className="badge" style={{ position: 'absolute', top: -2, right: '28%', minWidth: 16, height: 16, fontSize: '0.62rem' }}>
+            {totalBadge > 9 ? '9+' : totalBadge}
+          </span>
+        )}
       </div>
       {showVideo && (
         <div className={`tab ${active === 'videos' ? 'active' : ''}`} onClick={() => navigate('/videos')} title="Vidéos" style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
