@@ -388,6 +388,7 @@ input, textarea, select {
 .bubble-row.mine { justify-content: flex-end; }
 
 .bubble {
+  position: relative;
   max-width: 62%;
   padding: 11px 15px;
   border-radius: 18px;
@@ -405,6 +406,88 @@ input, textarea, select {
   color: var(--bubble-theirs-text);
   border: 1px solid var(--border);
   border-bottom-left-radius: 5px;
+}
+
+/* Pointe de bulle façon messagerie classique */
+.bubble-row.mine .bubble::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: -7px;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+  border-left-color: var(--accent-strong);
+  border-bottom: 0;
+  border-right: 0;
+}
+.bubble-row.theirs .bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -7px;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+  border-right-color: var(--bubble-theirs);
+  border-bottom: 0;
+  border-left: 0;
+}
+[data-theme='dark'] .bubble-row.theirs .bubble::before {
+  border-right-color: var(--bubble-theirs);
+}
+
+/* Bulle contenant une image/vidéo : plus de rembourrage interne,
+   le média occupe tout l'espace jusqu'aux bords arrondis */
+.bubble.media-bubble {
+  padding: 0;
+  overflow: hidden;
+}
+.bubble.media-bubble img,
+.bubble.media-bubble video {
+  border-radius: inherit;
+  display: block;
+}
+
+.media-wrapper {
+  position: relative;
+  cursor: pointer;
+  line-height: 0;
+}
+.media-wrapper img,
+.media-wrapper video {
+  max-width: 100%;
+  max-height: 340px;
+  width: 100%;
+  object-fit: cover;
+}
+
+.video-play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.video-duration-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 .typing-indicator {
@@ -436,6 +519,17 @@ input, textarea, select {
   font-size: 0.7rem;
   color: var(--text-muted);
   margin-top: 4px;
+}
+
+/* Détail "Envoyé à... / Vu à..." affiché en appuyant sur l'heure */
+.message-meta-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  animation: fadeIn 0.15s ease;
+}
+.message-meta-detail.mine {
+  text-align: right;
 }
 
 .composer {
