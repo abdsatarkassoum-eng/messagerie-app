@@ -1,4 +1,4 @@
- const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { OAuth2Client } = require('google-auth-library');
 const { User, JoinRequest } = require('../models');
@@ -247,8 +247,14 @@ async function logout(req, res) {
 }
 
 function sanitize(user) {
-  const { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt, wallpaper, profileVisibility, mediaAutoDownload } = user;
-  return { id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt, wallpaper, profileVisibility, mediaAutoDownload };
+  const {
+    id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
+    wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
+  } = user;
+  return {
+    id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
+    wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
+  };
 }
 
 module.exports = { register, login, googleAuth, forgotPassword, resetPassword, me, logout, sanitize };
