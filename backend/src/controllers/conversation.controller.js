@@ -1,54 +1,84 @@
- const { Op } = require('sequelize');
+const { Op } = require('sequelize');
 const {
+  sequelize,
   Conversation,
   ConversationMember,
   Message,
   User,
-  Friendship,
 } = require('../models');
 const { sanitize } = require('./auth.controller');
 
 // GET /api/conversations - liste des conversations de l'utilisateur
+// Version optimisée : tout est chargé en quelques requêtes groupées,
+// au lieu d'une boucle qui interroge la base pour chaque conversation.
 async function listConversations(req, res) {
   try {
-    const memberships = await ConversationMember.findAll({
+    const myMemberships = await ConversationMember.findAll({
       where: { userId: req.user.id },
     });
-    const conversationIds = memberships.map((m) => m.conversationId);
+    const conversationIds = myMemberships.map((m) => m.conversationId);
+
+    if (conversationIds.length === 0) {
+      return res.json({ conversations: [] });
+    }
 
     const conversations = await Conversation.findAll({
       where: { id: conversationIds },
       order: [['lastMessageAt', 'DESC']],
     });
 
-    const result = [];
-    for (const conv of conversations) {
-      const members = await ConversationMember.findAll({
-        where: { conversationId: conv.id },
-      });
-      const users = await User.findAll({ where: { id: members.map((m) => m.userId) } });
+    // Tous les membres de toutes ces conversations, en une seule requête
+    const allMembers = await ConversationMember.findAll({
+      where: { conversationId: conversationIds },
+    });
+    const membersByConv = {};
+    allMembers.forEach((m) => {
+      if (!membersByConv[m.conversationId]) membersByConv[m.conversationId] = [];
+      membersByConv[m.conversationId].push(m);
+    });
 
-      const lastMessage = await Message.findOne({
-        where: { conversationId: conv.id },
-        order: [['createdAt', 'DESC']],
-      });
+    // Tous les utilisateurs concernés, en une seule requête
+    const userIds = [...new Set(allMembers.map((m) => m.userId))];
+    const users = await User.findAll({ where: { id: userIds } });
+    const usersMap = Object.fromEntries(users.map((u) => [u.id, u]));
+
+    // Dernier message de chaque conversation, en une seule requête (PostgreSQL)
+    const lastMessages = await sequelize.query(
+      `SELECT DISTINCT ON ("conversationId") *
+       FROM messages
+       WHERE "conversationId" IN (:ids)
+       ORDER BY "conversationId", "createdAt" DESC`,
+      { replacements: { ids: conversationIds }, type: sequelize.QueryTypes.SELECT }
+    );
+    const lastMessageByConv = Object.fromEntries(lastMessages.map((m) => [m.conversationId, m]));
+
+    // Nombre de messages non lus par conversation, en une seule requête
+    const unreadRows = await sequelize.query(
+      `SELECT cm."conversationId" AS "conversationId", COUNT(m.id) AS "unreadCount"
+       FROM conversation_members cm
+       JOIN messages m
+         ON m."conversationId" = cm."conversationId"
+        AND m."senderId" != cm."userId"
+        AND m."createdAt" > cm."lastReadAt"
+       WHERE cm."userId" = :userId
+       GROUP BY cm."conversationId"`,
+      { replacements: { userId: req.user.id }, type: sequelize.QueryTypes.SELECT }
+    );
+    const unreadByConv = Object.fromEntries(unreadRows.map((r) => [r.conversationId, parseInt(r.unreadCount, 10)]));
+
+    const result = conversations.map((conv) => {
+      const members = membersByConv[conv.id] || [];
+      const memberUsers = members.map((m) => usersMap[m.userId]).filter(Boolean);
 
       let displayName = conv.name;
       let displayAvatar = conv.avatarUrl;
       if (!conv.isGroup) {
-        const other = users.find((u) => u.id !== req.user.id);
+        const other = memberUsers.find((u) => u.id !== req.user.id);
         displayName = other ? other.username : 'Conversation';
         displayAvatar = other ? other.avatarUrl : null;
       }
 
-      const myMembership = members.find((m) => m.userId === req.user.id);
-      const unreadCount = await Message.count({
-        where: {
-          conversationId: conv.id,
-          senderId: { [Op.ne]: req.user.id },
-          createdAt: { [Op.gt]: myMembership ? myMembership.lastReadAt : new Date(0) },
-        },
-      });
+      const lastMessage = lastMessageByConv[conv.id] || null;
 
       let lastMessageSeenByOther = null;
       if (!conv.isGroup && lastMessage && lastMessage.senderId === req.user.id) {
@@ -57,12 +87,12 @@ async function listConversations(req, res) {
           !!otherMembership && new Date(otherMembership.lastReadAt) >= new Date(lastMessage.createdAt);
       }
 
-      result.push({
+      return {
         id: conv.id,
         isGroup: conv.isGroup,
         name: displayName,
         avatarUrl: displayAvatar,
-        members: users.map(sanitize),
+        members: memberUsers.map(sanitize),
         memberRoles: Object.fromEntries(members.map((m) => [m.userId, m.role])),
         lastMessage: lastMessage
           ? {
@@ -73,10 +103,10 @@ async function listConversations(req, res) {
             }
           : null,
         lastMessageAt: conv.lastMessageAt,
-        unreadCount,
+        unreadCount: unreadByConv[conv.id] || 0,
         lastMessageSeenByOther,
-      });
-    }
+      };
+    });
 
     return res.json({ conversations: result });
   } catch (err) {
@@ -151,7 +181,7 @@ async function getMessages(req, res) {
   }
 }
 
-// POST /api/conversations/:id/read - marque la conversation comme lue par l'utilisateur
+// POST /api/conversations/:id/read
 async function markAsRead(req, res) {
   try {
     const { id } = req.params;
