@@ -1,4 +1,4 @@
-const { DataTypes } = require('sequelize');
+ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const User = sequelize.define(
@@ -22,7 +22,7 @@ const User = sequelize.define(
     },
     password: {
       type: DataTypes.STRING,
-      allowNull: true, // null pour les comptes créés via Google
+      allowNull: true,
     },
     googleId: {
       type: DataTypes.STRING,
@@ -72,6 +72,15 @@ const User = sequelize.define(
     mediaAutoDownload: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
+    },
+    // Lien vers une boutique/page externe (Facebook Shop, WhatsApp Business, site web…)
+    productsLink: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    servicesLink: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
     },
   },
   {
