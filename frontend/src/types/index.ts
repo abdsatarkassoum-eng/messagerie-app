@@ -11,6 +11,8 @@ export interface UserProfile {
   wallpaper?: string;
   profileVisibility?: 'everyone' | 'friends';
   mediaAutoDownload?: boolean;
+  productsLink?: string | null;
+  servicesLink?: string | null;
 }
 
 export interface ConversationSummary {
