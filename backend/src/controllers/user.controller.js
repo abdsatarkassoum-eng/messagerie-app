@@ -1,4 +1,4 @@
- const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const { Op, Sequelize } = require('sequelize');
 const { User, Friendship, FriendRequest, Conversation, ConversationMember, Post } = require('../models');
 const { sanitize } = require('./auth.controller');
@@ -18,6 +18,14 @@ function applyPrivacy(candidate, isFriend) {
     return { ...base, avatarUrl: null };
   }
   return base;
+}
+
+// Ajoute https:// devant un lien s'il n'a pas déjà un protocole
+function normalizeUrl(raw) {
+  if (!/^https?:\/\//i.test(raw)) {
+    return `https://${raw}`;
+  }
+  return raw;
 }
 
 // GET /api/users/search?q=
@@ -83,7 +91,10 @@ async function getUser(req, res) {
 // PUT /api/users/me
 async function updateProfile(req, res) {
   try {
-    const { username, bio, password, wallpaper, profileVisibility, mediaAutoDownload } = req.body;
+    const {
+      username, bio, password, wallpaper, profileVisibility, mediaAutoDownload,
+      productsLink, servicesLink,
+    } = req.body;
     const user = req.user;
 
     if (username && username !== user.username) {
@@ -102,6 +113,16 @@ async function updateProfile(req, res) {
 
     if (typeof mediaAutoDownload !== 'undefined') {
       user.mediaAutoDownload = mediaAutoDownload === 'true' || mediaAutoDownload === true;
+    }
+
+    if (typeof productsLink === 'string') {
+      const trimmed = productsLink.trim();
+      user.productsLink = trimmed ? normalizeUrl(trimmed) : null;
+    }
+
+    if (typeof servicesLink === 'string') {
+      const trimmed = servicesLink.trim();
+      user.servicesLink = trimmed ? normalizeUrl(trimmed) : null;
     }
 
     if (password) {
@@ -161,8 +182,6 @@ async function getUserProfile(req, res) {
       where: { id: conversationIds, isGroup: true },
     });
 
-    // Une seule requête groupée pour tous les membres de tous ces groupes,
-    // au lieu de 2 requêtes séparées par groupe.
     const allMembersOfTheseGroups = await ConversationMember.findAll({
       where: { conversationId: conversations.map((c) => c.id) },
     });
