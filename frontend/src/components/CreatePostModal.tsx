@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { X, Camera, Image as ImageIcon, Radio } from 'lucide-react';
+import { X, Camera, Video, Image as ImageIcon, Radio } from 'lucide-react';
 
 interface Props {
   onClose: () => void;
@@ -15,7 +15,8 @@ export default function CreatePostModal({ onClose }: Props) {
   const [content, setContent] = useState('');
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const photoCaptureRef = useRef<HTMLInputElement>(null);
+  const videoCaptureRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File | null) => {
@@ -39,7 +40,6 @@ export default function CreatePostModal({ onClose }: Props) {
       formData.append('file', file);
       const res = await api.post('/posts', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       onClose();
-      // Redirige vers le fil vidéo si c'est une vidéo, sinon le fil d'actualité classique
       navigate(res.data.post.type === 'video' ? '/videos' : '/feed');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erreur lors de la publication.');
@@ -62,8 +62,11 @@ export default function CreatePostModal({ onClose }: Props) {
 
         {step === 'choice' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', padding: '14px 16px' }} onClick={() => cameraInputRef.current?.click()}>
-              <Camera size={20} /> Prendre une photo ou une vidéo
+            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', padding: '14px 16px' }} onClick={() => photoCaptureRef.current?.click()}>
+              <Camera size={20} /> Prendre une photo
+            </button>
+            <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', padding: '14px 16px' }} onClick={() => videoCaptureRef.current?.click()}>
+              <Video size={20} /> Filmer une vidéo
             </button>
             <button className="btn btn-secondary" style={{ justifyContent: 'flex-start', padding: '14px 16px' }} onClick={() => galleryInputRef.current?.click()}>
               <ImageIcon size={20} /> Choisir depuis la galerie
@@ -72,15 +75,25 @@ export default function CreatePostModal({ onClose }: Props) {
               <Radio size={20} color="var(--danger)" /> Démarrer un live <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 'auto' }}>Bientôt</span>
             </button>
 
-            {/* Champs cachés : "capture" force l'ouverture de l'appareil photo sur mobile */}
+            {/* Photo : accept limité à image/* pour que "capture" ouvre bien l'appareil photo directement */}
             <input
-              ref={cameraInputRef}
+              ref={photoCaptureRef}
               type="file"
-              accept="image/*,video/*"
+              accept="image/*"
               capture="environment"
               hidden
               onChange={(e) => handleFile(e.target.files?.[0] || null)}
             />
+            {/* Vidéo : même logique, accept limité à video/* */}
+            <input
+              ref={videoCaptureRef}
+              type="file"
+              accept="video/*"
+              capture="environment"
+              hidden
+              onChange={(e) => handleFile(e.target.files?.[0] || null)}
+            />
+            {/* Galerie : pas de "capture", donc ouvre normalement le sélecteur de fichiers */}
             <input
               ref={galleryInputRef}
               type="file"
@@ -138,4 +151,4 @@ export default function CreatePostModal({ onClose }: Props) {
       </div>
     </div>
   );
-}
+                }
