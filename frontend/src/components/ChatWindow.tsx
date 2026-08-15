@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ConversationSummary, Message } from '../types';
+import { ConversationSummary, Message, UserProfile } from '../types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import GroupInfoModal from './GroupInfoModal';
 import { resolveFileUrl } from '../utils/url';
 import { wallpaperStyle } from '../utils/wallpapers';
 import { ArrowLeft, Phone, Video } from 'lucide-react';
@@ -13,11 +14,14 @@ interface Props {
   messages: Message[];
   typingUsers: string[];
   onlineStatus: Record<string, boolean>;
+  friends: UserProfile[];
   onSendText: (content: string) => void;
   onSendFile: (file: File) => void;
   onTyping: (isTyping: boolean) => void;
   onStartCall: (callType: 'audio' | 'video') => void;
   onBack?: () => void;
+  onConversationUpdated: () => void;
+  onLeaveGroup: () => void;
 }
 
 export default function ChatWindow({
@@ -25,15 +29,19 @@ export default function ChatWindow({
   messages,
   typingUsers,
   onlineStatus,
+  friends,
   onSendText,
   onSendFile,
   onTyping,
   onStartCall,
   onBack,
+  onConversationUpdated,
+  onLeaveGroup,
 }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -41,6 +49,14 @@ export default function ChatWindow({
 
   const other = !conversation.isGroup ? conversation.members.find((m) => m.id !== user?.id) : null;
   const isOnline = other ? onlineStatus[other.id] : false;
+
+  const handleHeaderClick = () => {
+    if (conversation.isGroup) {
+      setShowGroupInfo(true);
+    } else if (other) {
+      navigate(`/profile/${other.id}`);
+    }
+  };
 
   return (
     <div className="chat-area" style={{ minHeight: 0, height: '100%' }}>
@@ -51,8 +67,8 @@ export default function ChatWindow({
           )}
           <div
             className="avatar"
-            style={{ width: 40, height: 40, cursor: other ? 'pointer' : 'default' }}
-            onClick={() => other && navigate(`/profile/${other.id}`)}
+            style={{ width: 40, height: 40, cursor: 'pointer' }}
+            onClick={handleHeaderClick}
           >
             {conversation.avatarUrl ? (
               <img src={resolveFileUrl(conversation.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
@@ -60,8 +76,8 @@ export default function ChatWindow({
               conversation.name?.[0]?.toUpperCase()
             )}
           </div>
-          <div>
-            <div style={{ fontWeight: 700, cursor: other ? 'pointer' : 'default' }} onClick={() => other && navigate(`/profile/${other.id}`)}>
+          <div style={{ cursor: 'pointer' }} onClick={handleHeaderClick}>
+            <div style={{ fontWeight: 700 }}>
               {conversation.name}
             </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
@@ -114,6 +130,19 @@ export default function ChatWindow({
       </div>
 
       <MessageInput onSend={onSendText} onSendFile={onSendFile} onTyping={onTyping} />
+
+      {showGroupInfo && conversation.isGroup && (
+        <GroupInfoModal
+          conversation={conversation}
+          friends={friends}
+          onClose={() => setShowGroupInfo(false)}
+          onUpdated={onConversationUpdated}
+          onLeft={() => {
+            setShowGroupInfo(false);
+            onLeaveGroup();
+          }}
+        />
+      )}
     </div>
   );
-      }
+}
