@@ -9,10 +9,11 @@ type ChatTab = 'chats' | 'status' | 'friends' | 'requests';
 interface Props {
   active: 'home' | ChatTab | 'videos';
   showVideo?: boolean;
+  showCreateButton?: boolean;
   onNavigateTab?: (tab: ChatTab) => void;
 }
 
-export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
+export default function BottomNav({ active, showVideo, showCreateButton, onNavigateTab }: Props) {
   const navigate = useNavigate();
   const { totalBadge } = useNotifications();
   const [showCreate, setShowCreate] = useState(false);
@@ -53,30 +54,32 @@ export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
           <CircleDashed size={iconSize} />
         </div>
 
-        {/* Bouton central "Créer", en relief façon TikTok */}
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-          <button
-            onClick={() => setShowCreate(true)}
-            title="Créer"
-            style={{
-              position: 'absolute',
-              top: -16,
-              width: 42,
-              height: 32,
-              borderRadius: 10,
-              border: 'none',
-              background: 'linear-gradient(135deg, #12a389, #f2914a)',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 6px 16px -4px rgba(18, 163, 137, 0.5)',
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={20} />
-          </button>
-        </div>
+        {/* Bouton central "Créer" — uniquement sur le fil d'actualité */}
+        {showCreateButton && (
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
+            <button
+              onClick={() => setShowCreate(true)}
+              title="Créer"
+              style={{
+                position: 'absolute',
+                top: -16,
+                width: 42,
+                height: 32,
+                borderRadius: 10,
+                border: 'none',
+                background: 'linear-gradient(135deg, #12a389, #f2914a)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 6px 16px -4px rgba(18, 163, 137, 0.5)',
+                cursor: 'pointer',
+              }}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+        )}
 
         <div className={`tab ${active === 'friends' ? 'active' : ''}`} onClick={() => goToChatTab('friends')} title="Amis" style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '12px 4px' }}>
           <Users size={iconSize} />
@@ -99,4 +102,4 @@ export default function BottomNav({ active, showVideo, onNavigateTab }: Props) {
       {showCreate && <CreatePostModal onClose={() => setShowCreate(false)} />}
     </>
   );
-          }
+}
