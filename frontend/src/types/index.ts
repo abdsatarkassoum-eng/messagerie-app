@@ -1,3 +1,10 @@
+export interface LinkPreview {
+  title?: string | null;
+  description?: string | null;
+  image?: string | null;
+  domain?: string | null;
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -13,6 +20,8 @@ export interface UserProfile {
   mediaAutoDownload?: boolean;
   productsLink?: string | null;
   servicesLink?: string | null;
+  productsLinkPreview?: LinkPreview | null;
+  servicesLinkPreview?: LinkPreview | null;
 }
 
 export interface ConversationSummary {
@@ -156,4 +165,4 @@ export interface NotificationItem {
   body: string | null;
   read: boolean;
   createdAt: string;
-}
+  }
