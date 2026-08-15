@@ -13,6 +13,7 @@ const VideoFeed = lazy(() => import('./pages/VideoFeed'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminInvitations = lazy(() => import('./pages/AdminInvitations'));
+const InfoPage = lazy(() => import('./pages/InfoPage'));
 
 function PageLoader() {
   return (
@@ -82,6 +83,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/info/:page"
+          element={
+            <ProtectedRoute>
+              <InfoPage />
             </ProtectedRoute>
           }
         />
