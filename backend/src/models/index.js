@@ -1,4 +1,4 @@
- const sequelize = require('../config/database');
+const sequelize = require('../config/database');
 const User = require('./User');
 const FriendRequest = require('./FriendRequest');
 const Friendship = require('./Friendship');
@@ -78,6 +78,8 @@ async function syncDatabase() {
       `ALTER TABLE statuses ADD COLUMN IF NOT EXISTS "trimEnd" FLOAT`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "productsLink" VARCHAR(500)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "servicesLink" VARCHAR(500)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "productsLinkPreview" TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "servicesLinkPreview" TEXT`,
     ];
 
     for (const query of migrations) {
