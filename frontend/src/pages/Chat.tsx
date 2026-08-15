@@ -107,6 +107,9 @@ export default function Chat() {
 
     socket.on('friend_request:accepted', () => loadFriends());
 
+    socket.on('group:member_added', () => loadConversations());
+    socket.on('group:member_removed', () => loadConversations());
+
     socket.on('call:incoming', ({ conversationId, fromUserId, offer, callType }: any) => {
       const peer =
         friends.find((f) => f.id === fromUserId) ||
@@ -123,6 +126,8 @@ export default function Chat() {
       socket.off('typing:update');
       socket.off('conversation:read');
       socket.off('friend_request:accepted');
+      socket.off('group:member_added');
+      socket.off('group:member_removed');
       socket.off('call:incoming');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,6 +186,12 @@ export default function Chat() {
     setCallSession({ isIncoming: false, callType, peer, conversationId: activeConversation.id });
   };
 
+  const handleLeaveGroup = () => {
+    setActiveId(null);
+    setMobileShowChat(false);
+    loadConversations();
+  };
+
   return (
     <div className="app-root" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopNav />
@@ -209,11 +220,14 @@ export default function Chat() {
               messages={messagesByConv[activeConversation.id] || []}
               typingUsers={(typingByConv[activeConversation.id] || []).filter((id) => id !== user?.id)}
               onlineStatus={onlineStatus}
+              friends={friends}
               onSendText={sendText}
               onSendFile={sendFile}
               onTyping={handleTyping}
               onStartCall={startCall}
               onBack={() => setMobileShowChat(false)}
+              onConversationUpdated={loadConversations}
+              onLeaveGroup={handleLeaveGroup}
             />
           ) : (
             <div className="empty-state">
@@ -232,4 +246,4 @@ export default function Chat() {
       {!mobileShowChat && <BottomNav active={tab} onNavigateTab={setTab} />}
     </div>
   );
-        }
+          }
