@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, ShieldCheck, FileText, Info, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -55,6 +55,13 @@ export default function Settings() {
     setMediaAutoDownload(next);
     save({ mediaAutoDownload: next });
   };
+
+  const INFO_LINKS = [
+    { page: 'help', icon: <HelpCircle size={18} />, label: 'Centre d\'aide' },
+    { page: 'privacy', icon: <ShieldCheck size={18} />, label: 'Politique de confidentialité' },
+    { page: 'terms', icon: <FileText size={18} />, label: 'Conditions générales d\'utilisation' },
+    { page: 'about', icon: <Info size={18} />, label: 'À propos' },
+  ];
 
   return (
     <div className="app-root">
@@ -147,7 +154,25 @@ export default function Settings() {
             </button>
           </div>
         </div>
+
+        {/* Aide et informations */}
+        <div className="card" style={{ padding: 8, marginBottom: 20 }}>
+          {INFO_LINKS.map((link, i) => (
+            <div
+              key={link.page}
+              onClick={() => navigate(`/info/${link.page}`)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px',
+                cursor: 'pointer', borderBottom: i < INFO_LINKS.length - 1 ? '1px solid var(--border)' : 'none',
+              }}
+            >
+              <span style={{ color: 'var(--accent-strong)' }}>{link.icon}</span>
+              <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>{link.label}</span>
+              <ChevronRight size={16} color="var(--text-muted)" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
-}
+                   }
