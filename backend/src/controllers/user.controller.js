@@ -4,6 +4,7 @@ const { User, Friendship, FriendRequest, Conversation, ConversationMember, Post 
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
 const { enrichPostsBatch } = require('./post.controller');
+const { fetchLinkPreview } = require('../utils/linkPreview');
 
 async function getFriendIdsFor(userId) {
   const friendships = await Friendship.findAll({
@@ -20,7 +21,6 @@ function applyPrivacy(candidate, isFriend) {
   return base;
 }
 
-// Ajoute https:// devant un lien s'il n'a pas déjà un protocole
 function normalizeUrl(raw) {
   if (!/^https?:\/\//i.test(raw)) {
     return `https://${raw}`;
@@ -115,14 +115,34 @@ async function updateProfile(req, res) {
       user.mediaAutoDownload = mediaAutoDownload === 'true' || mediaAutoDownload === true;
     }
 
+    // Lien "boutique" : si changé, on va chercher son aperçu (titre/image/description)
     if (typeof productsLink === 'string') {
       const trimmed = productsLink.trim();
-      user.productsLink = trimmed ? normalizeUrl(trimmed) : null;
+      const newLink = trimmed ? normalizeUrl(trimmed) : null;
+      if (newLink !== user.productsLink) {
+        user.productsLink = newLink;
+        if (newLink) {
+          const preview = await fetchLinkPreview(newLink);
+          user.productsLinkPreview = preview ? JSON.stringify(preview) : null;
+        } else {
+          user.productsLinkPreview = null;
+        }
+      }
     }
 
+    // Lien "services" : même logique
     if (typeof servicesLink === 'string') {
       const trimmed = servicesLink.trim();
-      user.servicesLink = trimmed ? normalizeUrl(trimmed) : null;
+      const newLink = trimmed ? normalizeUrl(trimmed) : null;
+      if (newLink !== user.servicesLink) {
+        user.servicesLink = newLink;
+        if (newLink) {
+          const preview = await fetchLinkPreview(newLink);
+          user.servicesLinkPreview = preview ? JSON.stringify(preview) : null;
+        } else {
+          user.servicesLinkPreview = null;
+        }
+      }
     }
 
     if (password) {
