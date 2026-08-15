@@ -90,7 +90,7 @@ export default function Feed() {
           <PostCard key={p.id} post={p} onDeleted={(id: string) => setPosts((prev) => prev.filter((x) => x.id !== id))} />
         ))}
       </div>
-      <BottomNav active="home" showVideo />
+      <BottomNav active="home" showVideo showCreateButton />
     </div>
   );
           }
