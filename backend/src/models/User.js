@@ -1,4 +1,4 @@
- const { DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const User = sequelize.define(
@@ -73,13 +73,22 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-    // Lien vers une boutique/page externe (Facebook Shop, WhatsApp Business, site web…)
     productsLink: {
       type: DataTypes.STRING(500),
       allowNull: true,
     },
     servicesLink: {
       type: DataTypes.STRING(500),
+      allowNull: true,
+    },
+    // Aperçu (titre/description/image/domaine) stocké en JSON,
+    // récupéré une seule fois quand le lien est enregistré
+    productsLinkPreview: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    servicesLinkPreview: {
+      type: DataTypes.TEXT,
       allowNull: true,
     },
   },
