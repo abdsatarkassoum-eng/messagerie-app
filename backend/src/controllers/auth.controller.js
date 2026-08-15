@@ -246,14 +246,26 @@ async function logout(req, res) {
   }
 }
 
+function parsePreview(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function sanitize(user) {
   const {
     id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
     wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
+    productsLinkPreview, servicesLinkPreview,
   } = user;
   return {
     id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
     wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
+    productsLinkPreview: parsePreview(productsLinkPreview),
+    servicesLinkPreview: parsePreview(servicesLinkPreview),
   };
 }
 
