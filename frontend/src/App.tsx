@@ -14,6 +14,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminInvitations = lazy(() => import('./pages/AdminInvitations'));
 const InfoPage = lazy(() => import('./pages/InfoPage'));
+const SubscriptionReturn = lazy(() => import('./pages/SubscriptionReturn'));
 
 function PageLoader() {
   return (
@@ -95,6 +96,14 @@ export default function App() {
           }
         />
         <Route
+          path="/subscription/return"
+          element={
+            <ProtectedRoute>
+              <SubscriptionReturn />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile/:id"
           element={
             <ProtectedRoute>
@@ -114,4 +123,4 @@ export default function App() {
       </Routes>
     </Suspense>
   );
-}
+                }
