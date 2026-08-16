@@ -12,10 +12,14 @@ import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
 import {
   ArrowLeft, MessageCircle, UserPlus, Clock, Users,
-  FileText, Store, Briefcase, X,
+  FileText, Store, Briefcase, X, BadgeCheck,
 } from 'lucide-react';
 
 type Tab = 'posts' | 'groups' | 'products' | 'services';
+
+function isCurrentlyVerified(isVerified?: boolean, verifiedUntil?: string | null) {
+  return !!isVerified && !!verifiedUntil && new Date(verifiedUntil) > new Date();
+}
 
 export default function Profile() {
   const { id } = useParams();
@@ -26,6 +30,7 @@ export default function Profile() {
   const [showFriendsModal, setShowFriendsModal] = useState<null | 'friends' | 'followers'>(null);
   const [showLightbox, setShowLightbox] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [subLoading, setSubLoading] = useState(false);
 
   const load = () => {
     if (!id) return;
@@ -56,6 +61,18 @@ export default function Profile() {
     }
   };
 
+  const startVerification = async () => {
+    setSubLoading(true);
+    try {
+      const res = await api.post('/subscriptions/verified/initiate');
+      localStorage.setItem('pendingVerificationTxnId', String(res.data.transactionId));
+      window.location.href = res.data.checkoutUrl;
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur lors du paiement.');
+      setSubLoading(false);
+    }
+  };
+
   if (!profile || !id) {
     return (
       <div className="app-root">
@@ -68,6 +85,7 @@ export default function Profile() {
   const { user, relationship, friendCount, groups, canViewPosts, posts } = profile;
   const totalLikes = canViewPosts ? posts.reduce((sum, p) => sum + p.likesCount, 0) : 0;
   const isSelf = relationship === 'self';
+  const verified = isCurrentlyVerified(user.isVerified, user.verifiedUntil);
 
   const TABS: { id: Tab; icon: React.ReactNode; title: string }[] = [
     { id: 'posts', icon: <FileText size={18} />, title: 'Publications' },
@@ -102,7 +120,10 @@ export default function Profile() {
             </div>
           </div>
 
-          <h2 style={{ margin: '0 0 4px' }}>{user.username}</h2>
+          <h2 style={{ margin: '0 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {user.username}
+            {verified && <BadgeCheck size={20} color="#3b9eff" fill="#3b9eff" style={{ color: '#fff' }} titleAccess="Vendeur vérifié" />}
+          </h2>
           {user.bio && <p style={{ color: 'var(--text-muted)', margin: '0 0 14px', fontSize: '0.9rem' }}>{user.bio}</p>}
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginBottom: 18, flexWrap: 'wrap' }}>
@@ -146,6 +167,35 @@ export default function Profile() {
             </p>
           )}
         </div>
+
+        {/* Badge vendeur vérifié — uniquement sur son propre profil */}
+        {isSelf && (
+          <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <BadgeCheck size={20} color="#3b9eff" />
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Badge vendeur vérifié</h3>
+            </div>
+            {verified ? (
+              <>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Actif jusqu'au {new Date(user.verifiedUntil as string).toLocaleDateString('fr-FR')}.
+                </p>
+                <button className="btn btn-secondary" onClick={startVerification} disabled={subLoading} style={{ width: '100%' }}>
+                  {subLoading ? 'Redirection…' : 'Renouveler maintenant'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                  Affichez un badge de confiance sur votre profil et votre boutique — 1300 FCFA/mois, paiement sécurisé via FedaPay.
+                </p>
+                <button className="btn btn-primary" onClick={startVerification} disabled={subLoading} style={{ width: '100%' }}>
+                  {subLoading ? 'Redirection…' : 'Devenir vérifié — 1300 FCFA/mois'}
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         <div
           className="tabs"
@@ -265,4 +315,4 @@ export default function Profile() {
       )}
     </div>
   );
-}
+                         }
