@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { LinkPreview } from '../types';
+import { resolveFileUrl } from '../utils/url';
+import { avatarColorFor } from '../utils/avatarColor';
 import { Store, Briefcase, ExternalLink, MessageCircle, Pencil } from 'lucide-react';
 
 interface Props {
@@ -10,15 +12,47 @@ interface Props {
   isSelf: boolean;
 }
 
-function PreviewCard({ preview, type }: { preview: LinkPreview | null; type: 'product' | 'service' }) {
+function PreviewCard({
+  preview,
+  type,
+  ownerAvatarUrl,
+  ownerUsername,
+}: {
+  preview: LinkPreview | null;
+  type: 'product' | 'service';
+  ownerAvatarUrl: string | null;
+  ownerUsername: string;
+}) {
   const Icon = type === 'product' ? Store : Briefcase;
+
   return (
     <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', marginBottom: 16 }}>
       {preview?.image ? (
         <img src={preview.image} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }} />
+      ) : ownerAvatarUrl ? (
+        // Pas d'aperçu récupéré : la photo de profil du vendeur sert de visuel,
+        // en fond flouté agrandi pour éviter un effet "photo étirée"
+        <div style={{ position: 'relative', width: '100%', height: 150, overflow: 'hidden', background: avatarColorFor(ownerUsername) }}>
+          <img
+            src={resolveFileUrl(ownerAvatarUrl)}
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.75)', transform: 'scale(1.15)' }}
+          />
+          <img
+            src={resolveFileUrl(ownerAvatarUrl)}
+            alt=""
+            style={{
+              position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+              width: 76, height: 76, borderRadius: 999, objectFit: 'cover', border: '3px solid #fff',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
+            }}
+          />
+        </div>
       ) : (
-        <div style={{ width: '100%', height: 100, background: 'var(--bg-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={30} color="var(--accent-strong)" />
+        <div style={{ width: '100%', height: 100, background: avatarColorFor(ownerUsername), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 60, height: 60, borderRadius: 999, background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.4rem' }}>
+            {ownerUsername[0]?.toUpperCase()}
+          </div>
         </div>
       )}
       <div style={{ padding: '10px 14px', background: 'var(--bg-sunken)' }}>
@@ -35,6 +69,11 @@ function PreviewCard({ preview, type }: { preview: LinkPreview | null; type: 'pr
         {preview?.domain && (
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>{preview.domain}</div>
         )}
+        {!preview?.title && (
+          <div style={{ fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon size={14} /> {type === 'product' ? `Boutique de ${ownerUsername}` : `Services de ${ownerUsername}`}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -45,6 +84,7 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
   const [link, setLink] = useState<string | null>(null);
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   const [sellerName, setSellerName] = useState('');
+  const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -65,6 +105,7 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
       setPreview((res.data.user as any)[previewField] || null);
       setDraft(value || '');
       setSellerName(res.data.user.username);
+      setSellerAvatar(res.data.user.avatarUrl || null);
     } finally {
       setLoading(false);
     }
@@ -103,7 +144,6 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
     return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
   }
 
-  // --- Vue du propriétaire du profil ---
   if (isSelf) {
     return (
       <div className="card" style={{ padding: 24 }}>
@@ -123,7 +163,7 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
         {!editing ? (
           link ? (
             <>
-              <PreviewCard preview={preview} type={type} />
+              <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
               <div style={{ display: 'flex', gap: 10 }}>
                 <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ flex: 1, textDecoration: 'none' }}>
                   <ExternalLink size={16} /> Voir
@@ -178,7 +218,6 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
     );
   }
 
-  // --- Vue d'un visiteur : aperçu + bouton, jamais l'adresse brute ---
   if (!link) {
     return (
       <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -189,12 +228,7 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
 
   return (
     <div className="card" style={{ padding: 20 }}>
-      <PreviewCard preview={preview} type={type} />
-      {!preview?.title && (
-        <p style={{ textAlign: 'center', fontSize: '0.92rem', fontWeight: 600, margin: '0 0 14px' }}>
-          {type === 'product' ? `Boutique de ${sellerName}` : `Services de ${sellerName}`}
-        </p>
-      )}
+      <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
           <ExternalLink size={16} /> {type === 'product' ? 'Voir la boutique' : 'Voir les services'}
@@ -205,4 +239,4 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
       </div>
     </div>
   );
-                }
+        }
