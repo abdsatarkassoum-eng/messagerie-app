@@ -81,14 +81,21 @@ const User = sequelize.define(
       type: DataTypes.STRING(500),
       allowNull: true,
     },
-    // Aperçu (titre/description/image/domaine) stocké en JSON,
-    // récupéré une seule fois quand le lien est enregistré
     productsLinkPreview: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
     servicesLinkPreview: {
       type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    // Badge "Vendeur vérifié" — abonnement mensuel via FedaPay
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    verifiedUntil: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
   },
