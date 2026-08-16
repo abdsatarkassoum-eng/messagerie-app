@@ -22,6 +22,8 @@ export interface UserProfile {
   servicesLink?: string | null;
   productsLinkPreview?: LinkPreview | null;
   servicesLinkPreview?: LinkPreview | null;
+  isVerified?: boolean;
+  verifiedUntil?: string | null;
 }
 
 export interface ConversationSummary {
@@ -165,4 +167,4 @@ export interface NotificationItem {
   body: string | null;
   read: boolean;
   createdAt: string;
-  }
+}
