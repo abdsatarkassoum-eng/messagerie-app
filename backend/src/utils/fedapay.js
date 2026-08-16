@@ -1,6 +1,3 @@
-// Outils pour créer une transaction FedaPay et vérifier son statut.
-// FEDAPAY_ENV doit valoir "sandbox" (test) ou "live" (production).
-
 const FEDAPAY_ENV = process.env.FEDAPAY_ENV === 'live' ? 'live' : 'sandbox';
 const BASE_URL =
   FEDAPAY_ENV === 'live' ? 'https://api.fedapay.com/v1' : 'https://sandbox-api.fedapay.com/v1';
@@ -12,8 +9,7 @@ function authHeaders() {
   };
 }
 
-// Crée une transaction, puis génère l'adresse de paiement hébergée par FedaPay.
-async function createCheckoutTransaction({ amount, description, customerEmail, customData }) {
+async function createCheckoutTransaction({ amount, description, customerEmail, customData, callbackUrl }) {
   const createRes = await fetch(`${BASE_URL}/transactions`, {
     method: 'POST',
     headers: authHeaders(),
@@ -23,6 +19,7 @@ async function createCheckoutTransaction({ amount, description, customerEmail, c
       currency: { iso: 'XOF' },
       customer: { email: customerEmail },
       custom_data: customData,
+      callback_url: callbackUrl,
     }),
   });
   const createData = await createRes.json();
@@ -43,8 +40,6 @@ async function createCheckoutTransaction({ amount, description, customerEmail, c
   return { transactionId, checkoutUrl: tokenData.url };
 }
 
-// Interroge FedaPay pour connaître le statut réel d'une transaction
-// (plus sûr que de faire confiance à un simple appel du frontend).
 async function getTransactionStatus(transactionId) {
   const res = await fetch(`${BASE_URL}/transactions/${transactionId}`, {
     headers: authHeaders(),
