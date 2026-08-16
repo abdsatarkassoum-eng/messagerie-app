@@ -80,6 +80,8 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "servicesLink" VARCHAR(500)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "productsLinkPreview" TEXT`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "servicesLinkPreview" TEXT`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isVerified" BOOLEAN DEFAULT false`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS "verifiedUntil" TIMESTAMP WITH TIME ZONE`,
     ];
 
     for (const query of migrations) {
