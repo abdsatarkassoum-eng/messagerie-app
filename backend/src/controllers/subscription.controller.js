@@ -13,6 +13,7 @@ async function initiateVerification(req, res) {
       description: 'FriEnds — Badge vendeur vérifié (1 mois)',
       customerEmail: req.user.email,
       customData: { userId: req.user.id, purpose: 'verified_badge' },
+      callbackUrl: `${process.env.FRONTEND_URL}/subscription/return`,
     });
 
     return res.json({ checkoutUrl, transactionId });
@@ -23,8 +24,6 @@ async function initiateVerification(req, res) {
 }
 
 // GET /api/subscriptions/verified/check/:transactionId
-// Appelé par le frontend après retour de FedaPay, pour confirmer le paiement
-// en interrogeant directement FedaPay (source fiable), pas en se fiant au navigateur.
 async function checkVerification(req, res) {
   try {
     const { transactionId } = req.params;
@@ -42,8 +41,6 @@ async function checkVerification(req, res) {
     const user = await User.findByPk(userId);
     if (!user) return res.status(404).json({ message: 'Utilisateur introuvable.' });
 
-    // Si déjà vérifié et pas encore expiré, on prolonge à partir de la date d'expiration
-    // actuelle plutôt que de repartir d'aujourd'hui (pour ne pas perdre de jours payés).
     const base = user.verifiedUntil && user.verifiedUntil > new Date() ? user.verifiedUntil : new Date();
     user.isVerified = true;
     user.verifiedUntil = new Date(base.getTime() + SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
