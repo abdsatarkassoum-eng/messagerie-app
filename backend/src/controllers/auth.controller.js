@@ -259,13 +259,14 @@ function sanitize(user) {
   const {
     id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
     wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
-    productsLinkPreview, servicesLinkPreview,
+    productsLinkPreview, servicesLinkPreview, isVerified, verifiedUntil,
   } = user;
   return {
     id, username, email, avatarUrl, bio, status, lastSeen, isAdmin, createdAt,
     wallpaper, profileVisibility, mediaAutoDownload, productsLink, servicesLink,
     productsLinkPreview: parsePreview(productsLinkPreview),
     servicesLinkPreview: parsePreview(servicesLinkPreview),
+    isVerified, verifiedUntil,
   };
 }
 
