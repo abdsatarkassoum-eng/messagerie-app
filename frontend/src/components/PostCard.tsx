@@ -4,7 +4,7 @@ import api from '../services/api';
 import { PostItem, PostComment } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { Heart, MessageCircle, Trash2, Send } from 'lucide-react';
+import { Heart, MessageCircle, Trash2, Send, BadgeCheck } from 'lucide-react';
 
 interface Props {
   post: PostItem;
@@ -21,6 +21,10 @@ function timeAgo(dateStr: string) {
   const days = Math.floor(hours / 24);
   if (days < 7) return `il y a ${days} j`;
   return new Date(dateStr).toLocaleDateString('fr-FR');
+}
+
+function isCurrentlyVerified(isVerified?: boolean, verifiedUntil?: string | null) {
+  return !!isVerified && !!verifiedUntil && new Date(verifiedUntil) > new Date();
 }
 
 const mediaStyle: React.CSSProperties = {
@@ -44,6 +48,8 @@ export default function PostCard({ post, onDeleted }: Props) {
   const [commentsLoaded, setCommentsLoaded] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+
+  const verified = isCurrentlyVerified((post.author as any).isVerified, (post.author as any).verifiedUntil);
 
   const toggleLike = async () => {
     setLiked((v) => !v);
@@ -107,10 +113,11 @@ export default function PostCard({ post, onDeleted }: Props) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
-            style={{ fontWeight: 600, fontSize: '0.92rem', cursor: 'pointer', display: 'inline-block' }}
+            style={{ fontWeight: 600, fontSize: '0.92rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
             onClick={() => navigate(`/profile/${post.author.id}`)}
           >
             {post.author.username}
+            {verified && <BadgeCheck size={16} color="#fff" fill="#3b9eff" />}
           </div>
           <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</div>
         </div>
@@ -185,4 +192,4 @@ export default function PostCard({ post, onDeleted }: Props) {
       )}
     </div>
   );
-}
+                                         }
