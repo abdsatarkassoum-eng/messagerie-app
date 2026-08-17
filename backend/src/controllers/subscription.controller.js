@@ -16,6 +16,7 @@ async function initiateVerification(req, res) {
       callbackUrl: `${process.env.FRONTEND_URL}/subscription/return`,
     });
 
+    console.log('[VERIF] Transaction créée, id =', transactionId);
     return res.json({ checkoutUrl, transactionId });
   } catch (err) {
     console.error(err);
@@ -27,13 +28,19 @@ async function initiateVerification(req, res) {
 async function checkVerification(req, res) {
   try {
     const { transactionId } = req.params;
+    console.log('[VERIF] Appel check pour transactionId =', transactionId);
+
     const transaction = await getTransactionStatus(transactionId);
+    console.log('[VERIF] Réponse FedaPay brute =', JSON.stringify(transaction));
 
     if (transaction.status !== 'approved') {
+      console.log('[VERIF] Statut non reconnu comme approuvé. Statut reçu =', transaction.status);
       return res.json({ confirmed: false, status: transaction.status });
     }
 
     const userId = transaction.custom_data?.userId;
+    console.log('[VERIF] userId dans custom_data =', userId, '| req.user.id =', req.user.id);
+
     if (!userId || userId !== req.user.id) {
       return res.status(403).json({ message: 'Transaction non reconnue pour cet utilisateur.' });
     }
@@ -46,9 +53,10 @@ async function checkVerification(req, res) {
     user.verifiedUntil = new Date(base.getTime() + SUBSCRIPTION_DAYS * 24 * 60 * 60 * 1000);
     await user.save();
 
+    console.log('[VERIF] Badge vérifié activé pour userId =', userId);
     return res.json({ confirmed: true, user: sanitize(user) });
   } catch (err) {
-    console.error(err);
+    console.error('[VERIF] Erreur inattendue :', err);
     return res.status(500).json({ message: err.message || 'Erreur lors de la vérification du paiement.' });
   }
 }
