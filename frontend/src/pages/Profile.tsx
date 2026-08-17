@@ -122,7 +122,7 @@ export default function Profile() {
 
           <h2 style={{ margin: '0 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {user.username}
-            {verified && <BadgeCheck size={20} color="#3b9eff" fill="#3b9eff" style={{ color: '#fff' }} />}
+            {verified && <BadgeCheck size={20} color="#fff" fill="#3b9eff" />}
           </h2>
           {user.bio && <p style={{ color: 'var(--text-muted)', margin: '0 0 14px', fontSize: '0.9rem' }}>{user.bio}</p>}
 
