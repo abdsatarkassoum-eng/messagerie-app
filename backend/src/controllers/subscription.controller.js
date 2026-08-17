@@ -38,8 +38,8 @@ async function checkVerification(req, res) {
       return res.json({ confirmed: false, status: transaction.status });
     }
 
-    const userId = transaction.custom_data?.userId;
-    console.log('[VERIF] userId dans custom_data =', userId, '| req.user.id =', req.user.id);
+    const userId = transaction.custom_metadata?.userId;
+    console.log('[VERIF] userId dans custom_metadata =', userId, '| req.user.id =', req.user.id);
 
     if (!userId || userId !== req.user.id) {
       return res.status(403).json({ message: 'Transaction non reconnue pour cet utilisateur.' });
