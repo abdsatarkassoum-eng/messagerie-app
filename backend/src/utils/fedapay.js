@@ -18,7 +18,7 @@ async function createCheckoutTransaction({ amount, description, customerEmail, c
       amount,
       currency: { iso: 'XOF' },
       customer: { email: customerEmail },
-      custom_data: customData,
+      custom_metadata: customData,
       callback_url: callbackUrl,
     }),
   });
