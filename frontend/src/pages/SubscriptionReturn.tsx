@@ -5,10 +5,18 @@ import { useAuth } from '../context/AuthContext';
 import TopNav from '../components/TopNav';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
 
+const MAX_ATTEMPTS = 6;
+const DELAY_MS = 3000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function SubscriptionReturn() {
   const navigate = useNavigate();
   const { setUser } = useAuth();
   const [status, setStatus] = useState<'checking' | 'success' | 'failed'>('checking');
+  const [attempt, setAttempt] = useState(1);
 
   useEffect(() => {
     const txnId = localStorage.getItem('pendingVerificationTxnId');
@@ -16,18 +24,37 @@ export default function SubscriptionReturn() {
       setStatus('failed');
       return;
     }
-    api
-      .get(`/subscriptions/verified/check/${txnId}`)
-      .then((res) => {
-        if (res.data.confirmed) {
-          setUser(res.data.user);
-          setStatus('success');
-        } else {
-          setStatus('failed');
+
+    let cancelled = false;
+
+    async function pollStatus() {
+      for (let i = 1; i <= MAX_ATTEMPTS; i++) {
+        if (cancelled) return;
+        setAttempt(i);
+        try {
+          const res = await api.get(`/subscriptions/verified/check/${txnId}`);
+          if (res.data.confirmed) {
+            setUser(res.data.user);
+            setStatus('success');
+            localStorage.removeItem('pendingVerificationTxnId');
+            return;
+          }
+        } catch {
+          /* on retente au prochain passage */
         }
-      })
-      .catch(() => setStatus('failed'))
-      .finally(() => localStorage.removeItem('pendingVerificationTxnId'));
+        if (i < MAX_ATTEMPTS) await sleep(DELAY_MS);
+      }
+      if (!cancelled) {
+        setStatus('failed');
+        localStorage.removeItem('pendingVerificationTxnId');
+      }
+    }
+
+    pollStatus();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -38,7 +65,9 @@ export default function SubscriptionReturn() {
           <>
             <Loader size={40} color="var(--accent-strong)" style={{ marginBottom: 16 }} />
             <h2>Vérification du paiement…</h2>
-            <p style={{ color: 'var(--text-muted)' }}>Un instant, on confirme votre transaction avec FedaPay.</p>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Un instant, on confirme votre transaction avec FedaPay (tentative {attempt}/{MAX_ATTEMPTS}).
+            </p>
           </>
         )}
         {status === 'success' && (
