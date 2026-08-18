@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Users, Plus, Gamepad2, Sparkles, ChevronRight } from 'lucide-react';
+import {
+  ArrowLeft, Users, Plus, Gamepad2, Sparkles, Trophy, Circle, Compass, Flame, Target, Car,
+  Swords, Brain, Sword, Settings2, Ghost, Puzzle, Disc, Smartphone, Dices, Music2, Medal,
+  Mic2, BookOpen, Library, Film, ShoppingBag, Utensils, Palette, Camera, Laugh, Moon,
+  HeartPulse, Plane, Dumbbell, TrendingUp, Briefcase, GraduationCap,
+} from 'lucide-react';
 import api from '../services/api';
 import TopNav from '../components/TopNav';
 import ChatWindow from '../components/ChatWindow';
@@ -21,6 +26,45 @@ const HUB_GRADIENTS: Record<string, string> = {
   divertissement: 'linear-gradient(135deg, #ff5f8f 0%, #7c3aed 100%)',
 };
 
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  football: <Trophy size={24} />,
+  basket: <Circle size={24} />,
+  aventure: <Compass size={24} />,
+  'battle-royale': <Flame size={24} />,
+  fps: <Target size={24} />,
+  course: <Car size={24} />,
+  combat: <Swords size={24} />,
+  strategie: <Brain size={24} />,
+  moba: <Users size={24} />,
+  rpg: <Sword size={24} />,
+  simulation: <Settings2 size={24} />,
+  horreur: <Ghost size={24} />,
+  puzzle: <Puzzle size={24} />,
+  retro: <Disc size={24} />,
+  mobile: <Smartphone size={24} />,
+  cartes: <Dices size={24} />,
+  rythme: <Music2 size={24} />,
+  esport: <Medal size={24} />,
+  danse: <Music2 size={24} />,
+  chant: <Mic2 size={24} />,
+  'lecture-coranique': <BookOpen size={24} />,
+  bibliotheque: <Library size={24} />,
+  cinema: <Film size={24} />,
+  musique: <Music2 size={24} />,
+  mode: <ShoppingBag size={24} />,
+  cuisine: <Utensils size={24} />,
+  art: <Palette size={24} />,
+  photo: <Camera size={24} />,
+  humour: <Laugh size={24} />,
+  spiritualite: <Moon size={24} />,
+  bienetre: <HeartPulse size={24} />,
+  voyage: <Plane size={24} />,
+  fitness: <Dumbbell size={24} />,
+  devperso: <TrendingUp size={24} />,
+  business: <Briefcase size={24} />,
+  langues: <GraduationCap size={24} />,
+};
+
 const DARK = {
   bg: '#0a0c10',
   surface: '#15181f',
@@ -29,13 +73,17 @@ const DARK = {
   text: '#f5f6f8',
   textMuted: '#8b93a1',
   accentGradient: 'linear-gradient(90deg, #ff5f8f 0%, #ff9d5c 50%, #7c3aed 100%)',
-  accentSolid: '#ff5f8f',
 };
 
-const salonAvatarGradient = (name: string) => {
-  const hues = [280, 330, 15, 165, 195];
-  const hue = hues[name.charCodeAt(0) % hues.length];
-  return `linear-gradient(135deg, hsl(${hue},70%,45%), hsl(${(hue + 40) % 360},70%,30%))`;
+const hueForString = (s: string) => {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash);
+  return Math.abs(hash) % 360;
+};
+
+const gradientForString = (s: string) => {
+  const hue = hueForString(s);
+  return `linear-gradient(135deg, hsl(${hue},65%,32%), hsl(${(hue + 45) % 360},65%,16%))`;
 };
 
 export default function Explore() {
@@ -272,7 +320,6 @@ export default function Explore() {
                         style={{
                           width: 54, height: 54, borderRadius: 14, background: 'rgba(0,0,0,0.28)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                          backdropFilter: 'blur(4px)',
                         }}
                       >
                         {HUB_ICONS[h.slug] || <Sparkles size={28} />}
@@ -282,14 +329,13 @@ export default function Explore() {
                         <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>Voir les catégories</div>
                       </div>
                     </div>
-                    <ChevronRight size={22} color="rgba(255,255,255,0.7)" />
                   </div>
                 ))}
               </div>
             </>
           )}
 
-          {/* Niveau 2 : Catégories */}
+          {/* Niveau 2 : Catégories — en grille */}
           {selectedHub && !selectedCategory && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -304,29 +350,29 @@ export default function Explore() {
                 <h2 style={{ color: DARK.text, margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>{selectedHub.name}</h2>
               </div>
               {loading && <p style={{ color: DARK.textMuted }}>Chargement…</p>}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {!loading && categories.map((c) => (
                   <div
                     key={c.id}
                     onClick={() => openCategory(c)}
                     style={{
-                      background: DARK.surface,
+                      background: gradientForString(c.slug),
                       border: `1px solid ${DARK.border}`,
-                      borderRadius: 14,
-                      padding: '16px 18px',
+                      borderRadius: 16,
+                      padding: 16,
                       cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      display: 'flex', flexDirection: 'column', gap: 10, minHeight: 88,
                     }}
                   >
-                    <span style={{ color: DARK.text, fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</span>
-                    <ChevronRight size={18} color={DARK.textMuted} />
+                    <div style={{ color: '#fff' }}>{CATEGORY_ICONS[c.slug] || <Sparkles size={24} />}</div>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.2 }}>{c.name}</span>
                   </div>
                 ))}
               </div>
             </>
           )}
 
-          {/* Niveau 3 : Salons */}
+          {/* Niveau 3 : Salons — en grille */}
           {selectedCategory && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -353,31 +399,31 @@ export default function Explore() {
                   Aucun salon pour l'instant — sois le premier à en créer un !
                 </div>
               )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {!loading && salons.map((s) => (
                   <div
                     key={s.id}
                     style={{
                       background: DARK.surfaceRaised, border: `1px solid ${DARK.border}`, borderRadius: 16,
-                      padding: 14, display: 'flex', alignItems: 'center', gap: 12,
+                      padding: 14, display: 'flex', flexDirection: 'column', gap: 10,
                     }}
                   >
                     <div
                       style={{
-                        width: 48, height: 48, borderRadius: 12, flexShrink: 0, overflow: 'hidden',
-                        background: s.avatarUrl ? undefined : salonAvatarGradient(s.name),
+                        width: '100%', height: 70, borderRadius: 12, overflow: 'hidden',
+                        background: s.avatarUrl ? undefined : gradientForString(s.name),
                         display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
                       }}
                     >
                       {s.avatarUrl ? (
                         <img src={s.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <Users size={20} />
+                        <Users size={26} />
                       )}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: DARK.text, fontWeight: 700, fontSize: '0.95rem' }}>{s.name}</div>
-                      <div style={{ color: DARK.textMuted, fontSize: '0.78rem' }}>
+                    <div>
+                      <div style={{ color: DARK.text, fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2 }}>{s.name}</div>
+                      <div style={{ color: DARK.textMuted, fontSize: '0.74rem' }}>
                         {s.memberCount} membre{s.memberCount > 1 ? 's' : ''}
                       </div>
                     </div>
@@ -385,8 +431,8 @@ export default function Explore() {
                       onClick={() => (s.isMember ? openSalonChat(s) : joinSalon(s))}
                       style={{
                         border: s.isMember ? `1px solid ${DARK.border}` : 'none',
-                        borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem',
-                        cursor: 'pointer',
+                        borderRadius: 999, padding: '8px 0', fontWeight: 700, fontSize: '0.78rem',
+                        cursor: 'pointer', width: '100%',
                         color: s.isMember ? DARK.text : '#fff',
                         background: s.isMember ? DARK.surface : DARK.accentGradient,
                       }}
