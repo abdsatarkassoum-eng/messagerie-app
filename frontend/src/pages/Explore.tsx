@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Users, Plus, Gamepad2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Gamepad2, Sparkles, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import TopNav from '../components/TopNav';
 import ChatWindow from '../components/ChatWindow';
-import { avatarColorFor } from '../utils/avatarColor';
 import { useSocket } from '../context/SocketContext';
 import { ConversationSummary, Message } from '../types';
 
@@ -13,8 +12,30 @@ interface Category { id: string; slug: string; name: string; iconUrl: string | n
 interface Salon { id: string; name: string; avatarUrl: string | null; memberCount: number; isMember: boolean }
 
 const HUB_ICONS: Record<string, React.ReactNode> = {
-  gaming: <Gamepad2 size={26} />,
-  divertissement: <Sparkles size={26} />,
+  gaming: <Gamepad2 size={30} />,
+  divertissement: <Sparkles size={30} />,
+};
+
+const HUB_GRADIENTS: Record<string, string> = {
+  gaming: 'linear-gradient(135deg, #1f7a6c 0%, #0d3b33 100%)',
+  divertissement: 'linear-gradient(135deg, #ff5f8f 0%, #7c3aed 100%)',
+};
+
+const DARK = {
+  bg: '#0a0c10',
+  surface: '#15181f',
+  surfaceRaised: '#1b1f28',
+  border: '#262b35',
+  text: '#f5f6f8',
+  textMuted: '#8b93a1',
+  accentGradient: 'linear-gradient(90deg, #ff5f8f 0%, #ff9d5c 50%, #7c3aed 100%)',
+  accentSolid: '#ff5f8f',
+};
+
+const salonAvatarGradient = (name: string) => {
+  const hues = [280, 330, 15, 165, 195];
+  const hue = hues[name.charCodeAt(0) % hues.length];
+  return `linear-gradient(135deg, hsl(${hue},70%,45%), hsl(${(hue + 40) % 360},70%,30%))`;
 };
 
 export default function Explore() {
@@ -199,112 +220,228 @@ export default function Explore() {
   return (
     <div className="app-root">
       <TopNav />
-      <div style={{ maxWidth: 620, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', height: 'calc(100dvh - 58px)' }}>
-        <button className="btn btn-ghost" onClick={goBack} style={{ marginBottom: 16 }}>
-          <ArrowLeft size={16} /> Retour
-        </button>
+      <div
+        style={{
+          background: DARK.bg,
+          minHeight: 'calc(100dvh - 58px)',
+          padding: '20px 16px 40px',
+          overflowY: 'auto',
+          height: 'calc(100dvh - 58px)',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ maxWidth: 620, margin: '0 auto' }}>
+          <button
+            onClick={goBack}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+              color: DARK.textMuted, fontSize: '0.9rem', fontWeight: 600, padding: '8px 0', marginBottom: 12, cursor: 'pointer',
+            }}
+          >
+            <ArrowLeft size={16} /> Retour
+          </button>
 
-        {/* Niveau 1 : Hubs */}
-        {!selectedHub && (
-          <>
-            <h2 style={{ marginBottom: 16 }}>Explorer</h2>
-            <div style={{ display: 'flex', gap: 16 }}>
-              {hubs.map((h) => (
-                <div
-                  key={h.id}
-                  onClick={() => openHub(h)}
-                  className="card"
-                  style={{ flex: 1, padding: 20, textAlign: 'center', cursor: 'pointer' }}
-                >
-                  <div style={{ color: 'var(--accent-strong)', marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
-                    {HUB_ICONS[h.slug] || <Sparkles size={26} />}
+          {/* Niveau 1 : Hubs */}
+          {!selectedHub && (
+            <>
+              <h2 style={{ color: DARK.text, margin: '4px 0 4px', fontSize: '1.4rem', fontWeight: 800 }}>Explorer</h2>
+              <p style={{ color: DARK.textMuted, margin: '0 0 20px', fontSize: '0.88rem' }}>
+                Rejoins une communauté par centre d'intérêt.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {hubs.map((h) => (
+                  <div
+                    key={h.id}
+                    onClick={() => openHub(h)}
+                    style={{
+                      position: 'relative',
+                      borderRadius: 18,
+                      padding: 24,
+                      cursor: 'pointer',
+                      background: HUB_GRADIENTS[h.slug] || DARK.accentGradient,
+                      overflow: 'hidden',
+                      minHeight: 96,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div
+                        style={{
+                          width: 54, height: 54, borderRadius: 14, background: 'rgba(0,0,0,0.28)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                          backdropFilter: 'blur(4px)',
+                        }}
+                      >
+                        {HUB_ICONS[h.slug] || <Sparkles size={28} />}
+                      </div>
+                      <div>
+                        <div style={{ color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>{h.name}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.8rem' }}>Voir les catégories</div>
+                      </div>
+                    </div>
+                    <ChevronRight size={22} color="rgba(255,255,255,0.7)" />
                   </div>
-                  <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{h.name}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Niveau 2 : Catégories */}
-        {selectedHub && !selectedCategory && (
-          <>
-            <h2 style={{ marginBottom: 16 }}>{selectedHub.name}</h2>
-            {loading && <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>}
-            {!loading && categories.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => openCategory(c)}
-                className="card"
-                style={{ padding: 16, marginBottom: 10, cursor: 'pointer', fontWeight: 600, fontSize: '0.92rem' }}
-              >
-                {c.name}
+                ))}
               </div>
-            ))}
-          </>
-        )}
+            </>
+          )}
 
-        {/* Niveau 3 : Salons */}
-        {selectedCategory && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h2 style={{ margin: 0 }}>{selectedCategory.name}</h2>
-              <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
-                <Plus size={16} /> Créer
-              </button>
-            </div>
-            {loading && <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>}
-            {!loading && salons.length === 0 && (
-              <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>
-                Aucun salon pour l'instant — sois le premier à en créer un !
-              </div>
-            )}
-            {!loading && salons.map((s) => (
-              <div key={s.id} className="card" style={{ padding: 14, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Niveau 2 : Catégories */}
+          {selectedHub && !selectedCategory && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
                 <div
-                  className="avatar"
-                  style={{ width: 44, height: 44, background: s.avatarUrl ? undefined : avatarColorFor(s.name), color: '#fff' }}
+                  style={{
+                    width: 40, height: 40, borderRadius: 10, background: HUB_GRADIENTS[selectedHub.slug],
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
+                  }}
                 >
-                  {s.avatarUrl ? (
-                    <img src={s.avatarUrl} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
-                  ) : (
-                    <Users size={18} />
-                  )}
+                  {HUB_ICONS[selectedHub.slug] || <Sparkles size={20} />}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{s.name}</div>
-                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {s.memberCount} membre{s.memberCount > 1 ? 's' : ''}
+                <h2 style={{ color: DARK.text, margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>{selectedHub.name}</h2>
+              </div>
+              {loading && <p style={{ color: DARK.textMuted }}>Chargement…</p>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!loading && categories.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => openCategory(c)}
+                    style={{
+                      background: DARK.surface,
+                      border: `1px solid ${DARK.border}`,
+                      borderRadius: 14,
+                      padding: '16px 18px',
+                      cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <span style={{ color: DARK.text, fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</span>
+                    <ChevronRight size={18} color={DARK.textMuted} />
                   </div>
-                </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Niveau 3 : Salons */}
+          {selectedCategory && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                <h2 style={{ color: DARK.text, margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>{selectedCategory.name}</h2>
                 <button
-                  className={s.isMember ? 'btn btn-secondary' : 'btn btn-primary'}
-                  onClick={() => (s.isMember ? openSalonChat(s) : joinSalon(s))}
+                  onClick={() => setShowCreate(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 999,
+                    padding: '9px 16px', fontWeight: 700, fontSize: '0.85rem', color: '#fff',
+                    background: DARK.accentGradient, cursor: 'pointer',
+                  }}
                 >
-                  {s.isMember ? 'Ouvrir' : 'Rejoindre'}
+                  <Plus size={16} /> Créer
                 </button>
               </div>
-            ))}
-          </>
-        )}
+              {loading && <p style={{ color: DARK.textMuted }}>Chargement…</p>}
+              {!loading && salons.length === 0 && (
+                <div
+                  style={{
+                    background: DARK.surface, border: `1px dashed ${DARK.border}`, borderRadius: 16,
+                    padding: 28, textAlign: 'center', color: DARK.textMuted, fontSize: '0.88rem',
+                  }}
+                >
+                  Aucun salon pour l'instant — sois le premier à en créer un !
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!loading && salons.map((s) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      background: DARK.surfaceRaised, border: `1px solid ${DARK.border}`, borderRadius: 16,
+                      padding: 14, display: 'flex', alignItems: 'center', gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 48, height: 48, borderRadius: 12, flexShrink: 0, overflow: 'hidden',
+                        background: s.avatarUrl ? undefined : salonAvatarGradient(s.name),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                      }}
+                    >
+                      {s.avatarUrl ? (
+                        <img src={s.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Users size={20} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: DARK.text, fontWeight: 700, fontSize: '0.95rem' }}>{s.name}</div>
+                      <div style={{ color: DARK.textMuted, fontSize: '0.78rem' }}>
+                        {s.memberCount} membre{s.memberCount > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => (s.isMember ? openSalonChat(s) : joinSalon(s))}
+                      style={{
+                        border: 'none', borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        color: s.isMember ? DARK.text : '#fff',
+                        background: s.isMember ? DARK.surface : DARK.accentGradient,
+                        border1: s.isMember ? `1px solid ${DARK.border}` : 'none',
+                      }}
+                    >
+                      {s.isMember ? 'Ouvrir' : 'Rejoindre'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {showCreate && (
-        <div className="modal-backdrop" onClick={() => setShowCreate(false)}>
-          <div className="card" style={{ padding: 20, maxWidth: 400, width: '90%' }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginTop: 0 }}>Créer un salon</h3>
+        <div
+          onClick={() => setShowCreate(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: DARK.surfaceRaised, border: `1px solid ${DARK.border}`, borderRadius: 18, padding: 22, maxWidth: 400, width: '100%' }}
+          >
+            <h3 style={{ color: DARK.text, marginTop: 0, marginBottom: 14 }}>Créer un salon</h3>
             <input
-              className="field"
               placeholder="Nom du salon (ex: eFootball)"
               value={newSalonName}
               onChange={(e) => setNewSalonName(e.target.value)}
-              style={{ width: '100%', marginBottom: 14, boxSizing: 'border-box' }}
+              style={{
+                width: '100%', boxSizing: 'border-box', marginBottom: 16, padding: '12px 14px',
+                borderRadius: 10, border: `1px solid ${DARK.border}`, background: DARK.bg, color: DARK.text, fontSize: '0.9rem',
+              }}
             />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowCreate(false)}>
+              <button
+                onClick={() => setShowCreate(false)}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 10, border: `1px solid ${DARK.border}`,
+                  background: 'transparent', color: DARK.text, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
                 Annuler
               </button>
-              <button className="btn btn-primary" style={{ flex: 1 }} onClick={createSalon} disabled={creating}>
+              <button
+                onClick={createSalon}
+                disabled={creating}
+                style={{
+                  flex: 1, padding: '11px 0', borderRadius: 10, border: 'none',
+                  background: DARK.accentGradient, color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: creating ? 0.7 : 1,
+                }}
+              >
                 {creating ? 'Création…' : 'Créer'}
               </button>
             </div>
