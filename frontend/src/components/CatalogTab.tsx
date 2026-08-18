@@ -4,12 +4,21 @@ import api from '../services/api';
 import { LinkPreview } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { Store, Briefcase, ExternalLink, MessageCircle, Pencil } from 'lucide-react';
+import { Store, Briefcase, ExternalLink, MessageCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 interface Props {
   userId: string;
   type: 'product' | 'service';
   isSelf: boolean;
+}
+
+interface CatalogItemData {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  images: string[];
+  saleLink: string | null;
 }
 
 function PreviewCard({
@@ -30,8 +39,6 @@ function PreviewCard({
       {preview?.image ? (
         <img src={preview.image} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block' }} />
       ) : ownerAvatarUrl ? (
-        // Pas d'aperçu récupéré : la photo de profil du vendeur sert de visuel,
-        // en fond flouté agrandi pour éviter un effet "photo étirée"
         <div style={{ position: 'relative', width: '100%', height: 150, overflow: 'hidden', background: avatarColorFor(ownerUsername) }}>
           <img
             src={resolveFileUrl(ownerAvatarUrl)}
@@ -91,6 +98,15 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [items, setItems] = useState<CatalogItemData[]>([]);
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [itemName, setItemName] = useState('');
+  const [itemPrice, setItemPrice] = useState('');
+  const [itemDescription, setItemDescription] = useState('');
+  const [itemSaleLink, setItemSaleLink] = useState('');
+  const [itemFiles, setItemFiles] = useState<File[]>([]);
+  const [creatingItem, setCreatingItem] = useState(false);
+
   const linkField = type === 'product' ? 'productsLink' : 'servicesLink';
   const previewField = type === 'product' ? 'productsLinkPreview' : 'servicesLinkPreview';
   const label = type === 'product' ? 'boutique' : 'page de services';
@@ -106,6 +122,9 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
       setDraft(value || '');
       setSellerName(res.data.user.username);
       setSellerAvatar(res.data.user.avatarUrl || null);
+
+      const itemsRes = await api.get(`/catalog/user/${userId}`, { params: { type } });
+      setItems(itemsRes.data.items);
     } finally {
       setLoading(false);
     }
@@ -140,103 +159,214 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
     navigate('/', { state: { openConversationId: res.data.conversationId } });
   };
 
+  const createItem = async () => {
+    if (!itemName.trim()) return;
+    setCreatingItem(true);
+    try {
+      const formData = new FormData();
+      formData.append('type', type);
+      formData.append('name', itemName.trim());
+      formData.append('description', itemDescription.trim());
+      formData.append('price', itemPrice.trim());
+      formData.append('saleLink', itemSaleLink.trim());
+      itemFiles.forEach((f) => formData.append('files', f));
+
+      const res = await api.post('/catalog', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setItems((prev) => [res.data.item, ...prev]);
+      setShowAddItem(false);
+      setItemName('');
+      setItemPrice('');
+      setItemDescription('');
+      setItemSaleLink('');
+      setItemFiles([]);
+    } catch (err: any) {
+      alert(err.response?.data?.message || "Erreur lors de la création de l'article.");
+    } finally {
+      setCreatingItem(false);
+    }
+  };
+
+  const deleteItem = async (id: string) => {
+    if (!confirm('Supprimer cet article ?')) return;
+    await api.delete(`/catalog/${id}`);
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  };
+
   if (loading) {
     return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
   }
 
-  if (isSelf) {
-    return (
-      <div className="card" style={{ padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <Icon size={20} color="var(--accent-strong)" />
-          <h3 style={{ margin: 0, fontSize: '1rem' }}>
-            {type === 'product' ? 'Votre boutique' : 'Vos services'}
-          </h3>
-        </div>
-
-        {error && (
-          <div style={{ background: 'var(--coral-soft)', color: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 14, fontSize: '0.85rem' }}>
-            {error}
+  return (
+    <div>
+      {/* Lien externe global (boutique Facebook/WhatsApp/etc.) */}
+      {isSelf ? (
+        <div className="card" style={{ padding: 24, marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <Icon size={20} color="var(--accent-strong)" />
+            <h3 style={{ margin: 0, fontSize: '1rem' }}>
+              {type === 'product' ? 'Votre boutique externe' : 'Vos services externes'}
+            </h3>
           </div>
-        )}
 
-        {!editing ? (
-          link ? (
+          {error && (
+            <div style={{ background: 'var(--coral-soft)', color: 'var(--danger)', padding: 10, borderRadius: 8, marginBottom: 14, fontSize: '0.85rem' }}>
+              {error}
+            </div>
+          )}
+
+          {!editing ? (
+            link ? (
+              <>
+                <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ flex: 1, textDecoration: 'none' }}>
+                    <ExternalLink size={16} /> Voir
+                  </a>
+                  <button className="btn btn-secondary" onClick={() => setEditing(true)}>
+                    <Pencil size={16} /> Modifier
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+                  Optionnel : ajoutez le lien vers votre {label} externe (Facebook, WhatsApp Business, Instagram, site web…).
+                </p>
+                <button className="btn btn-primary" onClick={() => setEditing(true)} style={{ width: '100%' }}>
+                  Ajouter le lien
+                </button>
+              </>
+            )
+          ) : (
             <>
-              <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
+              <label className="field-label">Lien (URL complète)</label>
+              <input
+                className="field"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="https://..."
+                style={{ marginBottom: 6 }}
+              />
+              <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: 14 }}>
+                L'aperçu (image, titre) sera récupéré automatiquement à l'enregistrement.
+              </p>
               <div style={{ display: 'flex', gap: 10 }}>
-                <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ flex: 1, textDecoration: 'none' }}>
-                  <ExternalLink size={16} /> Voir
-                </a>
-                <button className="btn btn-secondary" onClick={() => setEditing(true)}>
-                  <Pencil size={16} /> Modifier
+                <button className="btn btn-primary" onClick={save} disabled={saving} style={{ flex: 1 }}>
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setDraft(link || '');
+                    setEditing(false);
+                    setError('');
+                  }}
+                >
+                  Annuler
                 </button>
               </div>
             </>
-          ) : (
-            <>
-              <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-                Ajoutez le lien vers votre {label} (Facebook, WhatsApp Business, Instagram, site web…).
-                Les visiteurs de votre profil verront un aperçu et pourront s'y rendre en un tap.
-              </p>
-              <button className="btn btn-primary" onClick={() => setEditing(true)} style={{ width: '100%' }}>
-                Ajouter le lien
-              </button>
-            </>
-          )
-        ) : (
-          <>
-            <label className="field-label">Lien (URL complète)</label>
-            <input
-              className="field"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="https://..."
-              style={{ marginBottom: 6 }}
-            />
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-              L'aperçu (image, titre) sera récupéré automatiquement à l'enregistrement — ça peut prendre quelques secondes.
-            </p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-primary" onClick={save} disabled={saving} style={{ flex: 1 }}>
-                {saving ? 'Enregistrement…' : 'Enregistrer'}
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  setDraft(link || '');
-                  setEditing(false);
-                  setError('');
-                }}
-              >
-                Annuler
+          )}
+        </div>
+      ) : (
+        link && (
+          <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+            <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                <ExternalLink size={16} /> {type === 'product' ? 'Voir la boutique' : 'Voir les services'}
+              </a>
+              <button className="btn btn-secondary" onClick={contactSeller}>
+                <MessageCircle size={16} /> Contacter {sellerName}
               </button>
             </div>
-          </>
+          </div>
+        )
+      )}
+
+      {/* Fiches produits/services publiées dans l'app */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
+          {type === 'product' ? 'Articles publiés' : 'Services publiés'}
+        </h3>
+        {isSelf && (
+          <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.82rem' }} onClick={() => setShowAddItem(true)}>
+            <Plus size={14} /> Ajouter
+          </button>
         )}
       </div>
-    );
-  }
 
-  if (!link) {
-    return (
-      <div className="card" style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>
-        {sellerName} n'a pas encore ajouté de {label}.
-      </div>
-    );
-  }
+      {items.length === 0 && (
+        <div className="card" style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.86rem', marginBottom: 20 }}>
+          {isSelf ? "Vous n'avez encore rien publié." : `${sellerName} n'a encore rien publié.`}
+        </div>
+      )}
 
-  return (
-    <div className="card" style={{ padding: 20 }}>
-      <PreviewCard preview={preview} type={type} ownerAvatarUrl={sellerAvatar} ownerUsername={sellerName} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <a href={link} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-          <ExternalLink size={16} /> {type === 'product' ? 'Voir la boutique' : 'Voir les services'}
-        </a>
-        <button className="btn btn-secondary" onClick={contactSeller}>
-          <MessageCircle size={16} /> Contacter {sellerName}
-        </button>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
+        {items.map((item) => (
+          <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 110, background: 'var(--bg-sunken)' }}>
+              {item.images[0] && (
+                <img src={resolveFileUrl(item.images[0])} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+            </div>
+            <div style={{ padding: 10 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.84rem', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {item.name}
+              </div>
+              {item.price && <div style={{ fontSize: '0.8rem', color: 'var(--accent-strong)', fontWeight: 700, marginBottom: 8 }}>{item.price}</div>}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {item.saleLink && (
+                  <a href={item.saleLink} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1, padding: '5px', fontSize: '0.74rem', textDecoration: 'none', textAlign: 'center' }}>
+                    Voir
+                  </a>
+                )}
+                {isSelf && (
+                  <button className="btn btn-ghost btn-icon" onClick={() => deleteItem(item.id)} title="Supprimer">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {showAddItem && (
+        <div className="modal-backdrop" onClick={() => setShowAddItem(false)}>
+          <div className="card" style={{ padding: 20, maxWidth: 420, width: '92%', maxHeight: '85vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0 }}>{type === 'product' ? 'Nouvel article' : 'Nouveau service'}</h3>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowAddItem(false)}><X size={18} /></button>
+            </div>
+
+            <label className="field-label">Nom</label>
+            <input className="field" value={itemName} onChange={(e) => setItemName(e.target.value)} style={{ marginBottom: 12, width: '100%', boxSizing: 'border-box' }} />
+
+            <label className="field-label">Prix (ex: 15 000 FCFA)</label>
+            <input className="field" value={itemPrice} onChange={(e) => setItemPrice(e.target.value)} style={{ marginBottom: 12, width: '100%', boxSizing: 'border-box' }} />
+
+            <label className="field-label">Description</label>
+            <textarea className="field" value={itemDescription} onChange={(e) => setItemDescription(e.target.value)} rows={3} style={{ marginBottom: 12, width: '100%', boxSizing: 'border-box' }} />
+
+            <label className="field-label">Lien de vente (WhatsApp, Facebook, site…)</label>
+            <input className="field" value={itemSaleLink} onChange={(e) => setItemSaleLink(e.target.value)} placeholder="https://..." style={{ marginBottom: 12, width: '100%', boxSizing: 'border-box' }} />
+
+            <label className="field-label">Photos (jusqu'à 6)</label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setItemFiles(Array.from(e.target.files || []).slice(0, 6))}
+              style={{ marginBottom: 16, width: '100%' }}
+            />
+
+            <button className="btn btn-primary" onClick={createItem} disabled={creatingItem || !itemName.trim()} style={{ width: '100%' }}>
+              {creatingItem ? 'Publication…' : 'Publier'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-        }
+                           }
