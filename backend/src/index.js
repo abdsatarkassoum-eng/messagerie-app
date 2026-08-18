@@ -25,6 +25,7 @@ const pushRoutes = require('./routes/push.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const callRoutes = require('./routes/call.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
+const hubRoutes = require('./routes/hub.routes');
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +60,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/hubs', hubRoutes);
 
 // Gestion des erreurs générique
 app.use((err, req, res, next) => {
