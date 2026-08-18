@@ -17,6 +17,8 @@ const PostComment = require('./PostComment');
 const CatalogItem = require('./CatalogItem');
 const PushSubscription = require('./PushSubscription');
 const Notification = require('./Notification');
+const Hub = require('./Hub');
+const Category = require('./Category');
 
 // --- Associations ---
 
@@ -59,6 +61,47 @@ PushSubscription.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Notification, { foreignKey: 'userId', as: 'notifications' });
 Notification.belongsTo(User, { foreignKey: 'fromUserId', as: 'fromUser' });
 
+Hub.hasMany(Category, { foreignKey: 'hubId', as: 'categories' });
+Category.belongsTo(Hub, { foreignKey: 'hubId', as: 'hub' });
+Category.hasMany(Conversation, { foreignKey: 'categoryId', as: 'salons' });
+Conversation.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
+
+async function seedHubsAndCategories() {
+  const [gamingHub] = await Hub.findOrCreate({
+    where: { slug: 'gaming' },
+    defaults: { name: 'GamingHub', order: 1 },
+  });
+  const [funHub] = await Hub.findOrCreate({
+    where: { slug: 'divertissement' },
+    defaults: { name: 'Divertissement', order: 2 },
+  });
+
+  const gamingCategories = [
+    { slug: 'football', name: 'Football' },
+    { slug: 'basket', name: 'Basket' },
+    { slug: 'aventure', name: "Jeux d'aventure" },
+  ];
+  const funCategories = [
+    { slug: 'danse', name: 'Danse' },
+    { slug: 'chant', name: 'Chant' },
+    { slug: 'lecture-coranique', name: 'Lecture coranique' },
+    { slug: 'bibliotheque', name: 'Bibliothèque' },
+  ];
+
+  for (let i = 0; i < gamingCategories.length; i++) {
+    await Category.findOrCreate({
+      where: { hubId: gamingHub.id, slug: gamingCategories[i].slug },
+      defaults: { name: gamingCategories[i].name, order: i },
+    });
+  }
+  for (let i = 0; i < funCategories.length; i++) {
+    await Category.findOrCreate({
+      where: { hubId: funHub.id, slug: funCategories[i].slug },
+      defaults: { name: funCategories[i].name, order: i },
+    });
+  }
+}
+
 async function syncDatabase() {
   await sequelize.sync();
 
@@ -82,6 +125,8 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "servicesLinkPreview" TEXT`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "isVerified" BOOLEAN DEFAULT false`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "verifiedUntil" TIMESTAMP WITH TIME ZONE`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "categoryId" UUID`,
+      `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "isPublic" BOOLEAN DEFAULT false`,
     ];
 
     for (const query of migrations) {
@@ -93,6 +138,9 @@ async function syncDatabase() {
       }
     }
   }
+
+  await seedHubsAndCategories();
+  console.log('✅ Hubs et catégories initialisés.');
 }
 
 module.exports = {
@@ -115,5 +163,7 @@ module.exports = {
   CatalogItem,
   PushSubscription,
   Notification,
+  Hub,
+  Category,
   syncDatabase,
 };
