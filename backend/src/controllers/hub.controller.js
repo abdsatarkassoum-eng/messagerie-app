@@ -1,4 +1,5 @@
-const { Hub, Category, Conversation, ConversationMember } = require('../models');
+const { Hub, Category, Conversation, ConversationMember, User } = require('../models');
+const { sanitize } = require('./auth.controller');
 
 // GET /api/hubs
 async function listHubs(req, res) {
@@ -117,4 +118,40 @@ async function joinSalon(req, res) {
   }
 }
 
-module.exports = { listHubs, listCategories, listSalons, createSalon, joinSalon };
+// GET /api/hubs/salons/:salonId
+async function getSalonSummary(req, res) {
+  try {
+    const { salonId } = req.params;
+    const salon = await Conversation.findByPk(salonId);
+    if (!salon || !salon.isPublic) return res.status(404).json({ message: 'Salon introuvable.' });
+
+    const isMember = await ConversationMember.findOne({
+      where: { conversationId: salonId, userId: req.user.id },
+    });
+    if (!isMember) return res.status(403).json({ message: 'Rejoignez le salon pour accéder à la discussion.' });
+
+    const members = await ConversationMember.findAll({ where: { conversationId: salonId } });
+    const userIds = members.map((m) => m.userId);
+    const users = await User.findAll({ where: { id: userIds } });
+
+    return res.json({
+      conversation: {
+        id: salon.id,
+        isGroup: true,
+        name: salon.name,
+        avatarUrl: salon.avatarUrl,
+        members: users.map(sanitize),
+        memberRoles: Object.fromEntries(members.map((m) => [m.userId, m.role])),
+        lastMessage: null,
+        lastMessageAt: salon.lastMessageAt,
+        unreadCount: 0,
+        lastMessageSeenByOther: null,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération du salon.' });
+  }
+}
+
+module.exports = { listHubs, listCategories, listSalons, createSalon, joinSalon, getSalonSummary };
