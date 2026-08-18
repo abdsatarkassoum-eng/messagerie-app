@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Users, Plus, Gamepad2, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import TopNav from '../components/TopNav';
+import ChatWindow from '../components/ChatWindow';
 import { avatarColorFor } from '../utils/avatarColor';
+import { useSocket } from '../context/SocketContext';
+import { ConversationSummary, Message } from '../types';
 
 interface Hub { id: string; slug: string; name: string; iconUrl: string | null }
 interface Category { id: string; slug: string; name: string; iconUrl: string | null }
@@ -17,6 +20,7 @@ const HUB_ICONS: Record<string, React.ReactNode> = {
 export default function Explore() {
   const navigate = useNavigate();
   const location = useLocation();
+  const socket = useSocket();
   const preselectHub = (location.state as any)?.hubSlug as string | undefined;
 
   const [hubs, setHubs] = useState<Hub[]>([]);
@@ -29,6 +33,12 @@ export default function Explore() {
   const [newSalonName, setNewSalonName] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const [activeSalon, setActiveSalon] = useState<ConversationSummary | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const activeSalonIdRef = useRef<string | null>(null);
+  activeSalonIdRef.current = activeSalon?.id || null;
+
   useEffect(() => {
     api.get('/hubs').then((res) => {
       setHubs(res.data.hubs);
@@ -39,6 +49,34 @@ export default function Explore() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onNewMessage = (msg: Message) => {
+      if (msg.conversationId === activeSalonIdRef.current) {
+        setMessages((prev) => [...prev, msg]);
+        api.post(`/conversations/${msg.conversationId}/read`).catch(() => {});
+      }
+    };
+    const onTyping = ({ conversationId, userId, isTyping }: any) => {
+      if (conversationId !== activeSalonIdRef.current) return;
+      setTypingUsers((prev) => {
+        const current = new Set(prev);
+        if (isTyping) current.add(userId);
+        else current.delete(userId);
+        return Array.from(current);
+      });
+    };
+
+    socket.on('message:new', onNewMessage);
+    socket.on('typing:update', onTyping);
+
+    return () => {
+      socket.off('message:new', onNewMessage);
+      socket.off('typing:update', onTyping);
+    };
+  }, [socket]);
 
   const openHub = (hub: Hub) => {
     setSelectedHub(hub);
@@ -68,8 +106,41 @@ export default function Explore() {
     refreshSalons();
   };
 
-  const openConversation = (salon: Salon) => {
-    navigate('/', { state: { openConversationId: salon.id } });
+  const openSalonChat = async (salon: Salon) => {
+    const [summaryRes, messagesRes] = await Promise.all([
+      api.get(`/hubs/salons/${salon.id}`),
+      api.get(`/conversations/${salon.id}/messages`),
+    ]);
+    setActiveSalon(summaryRes.data.conversation);
+    setMessages(messagesRes.data.messages);
+    setTypingUsers([]);
+    socket?.emit('conversation:join', { conversationId: salon.id });
+    api.post(`/conversations/${salon.id}/read`).catch(() => {});
+  };
+
+  const closeSalonChat = () => {
+    setActiveSalon(null);
+    setMessages([]);
+    setTypingUsers([]);
+    refreshSalons();
+  };
+
+  const sendText = async (content: string) => {
+    if (!activeSalon) return;
+    await api.post('/messages', { conversationId: activeSalon.id, content, type: 'text' });
+  };
+
+  const sendFile = async (file: File) => {
+    if (!activeSalon) return;
+    const formData = new FormData();
+    formData.append('conversationId', activeSalon.id);
+    formData.append('file', file);
+    await api.post('/messages', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+  };
+
+  const handleTyping = (isTyping: boolean) => {
+    if (!activeSalon) return;
+    socket?.emit(isTyping ? 'typing:start' : 'typing:stop', { conversationId: activeSalon.id });
   };
 
   const createSalon = async () => {
@@ -88,7 +159,9 @@ export default function Explore() {
   };
 
   const goBack = () => {
-    if (selectedCategory) {
+    if (activeSalon) {
+      closeSalonChat();
+    } else if (selectedCategory) {
       setSelectedCategory(null);
       setSalons([]);
     } else if (selectedHub) {
@@ -98,6 +171,30 @@ export default function Explore() {
       navigate('/settings');
     }
   };
+
+  if (activeSalon) {
+    return (
+      <div className="app-root" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+        <TopNav />
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ChatWindow
+            conversation={activeSalon}
+            messages={messages}
+            typingUsers={typingUsers}
+            onlineStatus={{}}
+            friends={[]}
+            onSendText={sendText}
+            onSendFile={sendFile}
+            onTyping={handleTyping}
+            onStartCall={() => alert("Les appels ne sont pas disponibles dans les salons.")}
+            onBack={closeSalonChat}
+            onConversationUpdated={() => {}}
+            onLeaveGroup={closeSalonChat}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-root">
@@ -182,7 +279,7 @@ export default function Explore() {
                 </div>
                 <button
                   className={s.isMember ? 'btn btn-secondary' : 'btn btn-primary'}
-                  onClick={() => (s.isMember ? openConversation(s) : joinSalon(s))}
+                  onClick={() => (s.isMember ? openSalonChat(s) : joinSalon(s))}
                 >
                   {s.isMember ? 'Ouvrir' : 'Rejoindre'}
                 </button>
@@ -216,4 +313,4 @@ export default function Explore() {
       )}
     </div>
   );
-                        }
+                                                             }
