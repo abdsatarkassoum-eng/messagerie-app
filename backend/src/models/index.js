@@ -156,6 +156,7 @@ async function syncDatabase() {
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS "verifiedUntil" TIMESTAMP WITH TIME ZONE`,
       `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "categoryId" UUID`,
       `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "isPublic" BOOLEAN DEFAULT false`,
+      `ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS "saleLink" VARCHAR(255)`,
     ];
 
     for (const query of migrations) {
