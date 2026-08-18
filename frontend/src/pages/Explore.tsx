@@ -316,7 +316,6 @@ export default function Explore() {
                       padding: '16px 18px',
                       cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      transition: 'background 0.15s',
                     }}
                   >
                     <span style={{ color: DARK.text, fontWeight: 600, fontSize: '0.95rem' }}>{c.name}</span>
@@ -385,11 +384,11 @@ export default function Explore() {
                     <button
                       onClick={() => (s.isMember ? openSalonChat(s) : joinSalon(s))}
                       style={{
-                        border: 'none', borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem',
+                        border: s.isMember ? `1px solid ${DARK.border}` : 'none',
+                        borderRadius: 999, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem',
                         cursor: 'pointer',
                         color: s.isMember ? DARK.text : '#fff',
                         background: s.isMember ? DARK.surface : DARK.accentGradient,
-                        border1: s.isMember ? `1px solid ${DARK.border}` : 'none',
                       }}
                     >
                       {s.isMember ? 'Ouvrir' : 'Rejoindre'}
@@ -450,4 +449,4 @@ export default function Explore() {
       )}
     </div>
   );
-    }
+      }
