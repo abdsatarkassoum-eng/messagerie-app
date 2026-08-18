@@ -81,6 +81,8 @@ export default function Sidebar({
   const [results, setResults] = useState<UserProfile[]>([]);
   const [requests, setRequests] = useState<FriendRequestItem[]>([]);
   const [showNewGroup, setShowNewGroup] = useState(false);
+  const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
+  const [sentSuggestionIds, setSentSuggestionIds] = useState<string[]>([]);
 
   const loadRequests = async () => {
     const res = await api.get('/friends/requests');
@@ -88,8 +90,14 @@ export default function Sidebar({
     setRequestsCount(res.data.received.length);
   };
 
+  const loadSuggestions = async () => {
+    const res = await api.get('/users/suggestions/list');
+    setSuggestions(res.data.users);
+  };
+
   useEffect(() => {
     loadRequests();
+    loadSuggestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,6 +124,15 @@ export default function Sidebar({
     try {
       await api.post('/friends/request', { receiverId });
       setResults((prev) => prev.filter((u) => u.id !== receiverId));
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erreur.');
+    }
+  };
+
+  const addSuggestedFriend = async (id: string) => {
+    try {
+      await api.post('/friends/request', { receiverId: id });
+      setSentSuggestionIds((prev) => [...prev, id]);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erreur.');
     }
@@ -241,31 +258,73 @@ export default function Sidebar({
             })
           ))}
 
-        {tab === 'friends' &&
-          (friends.length === 0 ? (
-            <p style={{ padding: 20, color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-              Vous n'avez pas encore d'amis. Utilisez la recherche pour en ajouter.
-            </p>
-          ) : (
-            friends.map((f) => (
-              <div key={f.id} className="conversation-item" onClick={() => onOpenPrivateChat(f.id)}>
-                <div
-                  style={{ position: 'relative' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/profile/${f.id}`);
-                  }}
-                >
-                  <AvatarCircle url={f.avatarUrl} name={f.username} />
-                  <div className={`presence-dot ${onlineStatus[f.id] ? 'online' : ''}`} style={{ position: 'absolute', right: -1, bottom: -1 }} />
+        {tab === 'friends' && (
+          <div>
+            {suggestions.length > 0 && (
+              <>
+                <div style={{ padding: '10px 16px 4px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Suggestions pour vous
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{f.username}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{onlineStatus[f.id] ? 'En ligne' : 'Hors ligne'}</div>
+                <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '4px 16px 14px', touchAction: 'pan-x', overscrollBehaviorX: 'contain' as any }}>
+                  {suggestions.map((u) => (
+                    <div key={u.id} className="card" style={{ padding: 12, textAlign: 'center', minWidth: 110, flexShrink: 0 }}>
+                      <div
+                        className="avatar"
+                        style={{ width: 46, height: 46, margin: '0 auto 8px', background: u.avatarUrl ? undefined : avatarColorFor(u.username), color: '#fff', cursor: 'pointer' }}
+                        onClick={() => navigate(`/profile/${u.id}`)}
+                      >
+                        {u.avatarUrl ? (
+                          <img src={resolveFileUrl(u.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
+                        ) : (
+                          u.username[0]?.toUpperCase()
+                        )}
+                      </div>
+                      <div
+                        style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
+                        onClick={() => navigate(`/profile/${u.id}`)}
+                      >
+                        {u.username}
+                      </div>
+                      <button
+                        className="btn btn-primary"
+                        style={{ width: '100%', padding: '5px', fontSize: '0.76rem' }}
+                        onClick={() => addSuggestedFriend(u.id)}
+                        disabled={sentSuggestionIds.includes(u.id)}
+                      >
+                        {sentSuggestionIds.includes(u.id) ? '✓' : 'Ajouter'}
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))
-          ))}
+              </>
+            )}
+
+            {friends.length === 0 ? (
+              <p style={{ padding: 20, color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                Vous n'avez pas encore d'amis. Utilisez la recherche pour en ajouter.
+              </p>
+            ) : (
+              friends.map((f) => (
+                <div key={f.id} className="conversation-item" onClick={() => onOpenPrivateChat(f.id)}>
+                  <div
+                    style={{ position: 'relative' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/profile/${f.id}`);
+                    }}
+                  >
+                    <AvatarCircle url={f.avatarUrl} name={f.username} />
+                    <div className={`presence-dot ${onlineStatus[f.id] ? 'online' : ''}`} style={{ position: 'absolute', right: -1, bottom: -1 }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{f.username}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{onlineStatus[f.id] ? 'En ligne' : 'Hors ligne'}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {tab === 'requests' && (
           <div>
@@ -356,4 +415,4 @@ export default function Sidebar({
       )}
     </div>
   );
-        }
+                                                  }
