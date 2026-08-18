@@ -23,7 +23,7 @@ async function listConversations(req, res) {
     }
 
     const conversations = await Conversation.findAll({
-      where: { id: conversationIds },
+      where: { id: conversationIds, categoryId: null },
       order: [['lastMessageAt', 'DESC']],
     });
 
