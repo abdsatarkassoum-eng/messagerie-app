@@ -64,18 +64,22 @@ export default function Explore() {
   };
 
   const joinSalon = async (salon: Salon) => {
-    const res = await api.post(`/hubs/salons/${salon.id}/join`);
-    navigate('/', { state: { openConversationId: res.data.conversationId } });
+    await api.post(`/hubs/salons/${salon.id}/join`);
+    refreshSalons();
+  };
+
+  const openConversation = (salon: Salon) => {
+    navigate('/', { state: { openConversationId: salon.id } });
   };
 
   const createSalon = async () => {
     if (!newSalonName.trim() || !selectedCategory) return;
     setCreating(true);
     try {
-      const res = await api.post(`/hubs/categories/${selectedCategory.id}/salons`, { name: newSalonName.trim() });
+      await api.post(`/hubs/categories/${selectedCategory.id}/salons`, { name: newSalonName.trim() });
       setShowCreate(false);
       setNewSalonName('');
-      navigate('/', { state: { openConversationId: res.data.salon.id } });
+      refreshSalons();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erreur lors de la création du salon.');
     } finally {
@@ -178,7 +182,7 @@ export default function Explore() {
                 </div>
                 <button
                   className={s.isMember ? 'btn btn-secondary' : 'btn btn-primary'}
-                  onClick={() => joinSalon(s)}
+                  onClick={() => (s.isMember ? openConversation(s) : joinSalon(s))}
                 >
                   {s.isMember ? 'Ouvrir' : 'Rejoindre'}
                 </button>
@@ -212,4 +216,4 @@ export default function Explore() {
       )}
     </div>
   );
-}
+                        }
