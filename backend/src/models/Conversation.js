@@ -29,6 +29,14 @@ const Conversation = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    categoryId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+    },
+    isPublic: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     tableName: 'conversations',
