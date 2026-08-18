@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, HelpCircle, ShieldCheck, FileText, Info, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, HelpCircle, ShieldCheck, FileText, Info, ChevronRight, LogOut, Gamepad2, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,7 +9,7 @@ import { WALLPAPERS } from '../utils/wallpapers';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, setUser } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [wallpaper, setWallpaper] = useState(user?.wallpaper || 'default');
@@ -56,6 +56,11 @@ export default function Settings() {
     save({ mediaAutoDownload: next });
   };
 
+  const HUBS = [
+    { id: 'gaming', label: 'GamingHub', icon: <Gamepad2 size={28} />, color: '#1f7a6c' },
+    { id: 'divertissement', label: 'Divertissement', icon: <Sparkles size={28} />, color: '#7c5cff' },
+  ];
+
   const INFO_LINKS = [
     { page: 'help', icon: <HelpCircle size={18} />, label: 'Centre d\'aide' },
     { page: 'privacy', icon: <ShieldCheck size={18} />, label: 'Politique de confidentialité' },
@@ -70,6 +75,28 @@ export default function Settings() {
         <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ marginBottom: 16 }}>
           <ArrowLeft size={16} /> Retour aux discussions
         </button>
+
+        {/* Hubs */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 28, justifyContent: 'center' }}>
+          {HUBS.map((h) => (
+            <div
+              key={h.id}
+              onClick={() => alert('Bientôt disponible — cette section arrive prochainement !')}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', width: 96 }}
+            >
+              <div
+                style={{
+                  width: 72, height: 72, borderRadius: 20, background: h.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                }}
+              >
+                {h.icon}
+              </div>
+              <span style={{ fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>{h.label}</span>
+            </div>
+          ))}
+        </div>
 
         <h2 style={{ marginBottom: 4 }}>Réglages</h2>
         <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: 24 }}>
@@ -172,7 +199,31 @@ export default function Settings() {
             </div>
           ))}
         </div>
+
+        {/* Compte */}
+        <div className="card" style={{ padding: 8, marginBottom: 20 }}>
+          {user?.isAdmin && (
+            <div
+              onClick={() => navigate('/admin/invitations')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px',
+                cursor: 'pointer', borderBottom: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ color: 'var(--accent-strong)' }}><ShieldCheck size={18} /></span>
+              <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>Administration</span>
+              <ChevronRight size={16} color="var(--text-muted)" />
+            </div>
+          )}
+          <div
+            onClick={logout}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px', cursor: 'pointer', color: 'var(--danger)' }}
+          >
+            <LogOut size={18} />
+            <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>Déconnexion</span>
+          </div>
+        </div>
       </div>
     </div>
   );
-                   }
+      }
