@@ -81,7 +81,7 @@ export default function Settings() {
           {HUBS.map((h) => (
             <div
               key={h.id}
-              onClick={() => alert('Bientôt disponible — cette section arrive prochainement !')}
+              onClick={() => navigate('/explore', { state: { hubSlug: h.id === 'gaming' ? 'gaming' : 'divertissement' } })}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', width: 96 }}
             >
               <div
