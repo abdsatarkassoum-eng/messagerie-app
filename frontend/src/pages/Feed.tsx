@@ -5,31 +5,37 @@ import TopNav from '../components/TopNav';
 import BottomNav from '../components/BottomNav';
 import CreatePostBox from '../components/CreatePostBox';
 import PostCard from '../components/PostCard';
-import { PostItem, UserProfile } from '../types';
+import { PostItem } from '../types';
 import { resolveFileUrl } from '../utils/url';
-import { avatarColorFor } from '../utils/avatarColor';
+
+interface MarketplaceItem {
+  id: string;
+  name: string;
+  price: string | null;
+  images: string[];
+  saleLink: string | null;
+  owner: { id: string; username: string } | null;
+}
 
 export default function Feed() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
-  const [sentIds, setSentIds] = useState<string[]>([]);
+  const [marketItems, setMarketItems] = useState<MarketplaceItem[]>([]);
 
   useEffect(() => {
     api.get('/posts').then((res) => {
       setPosts(res.data.posts);
       setLoading(false);
     });
-    api.get('/users/suggestions/list').then((res) => setSuggestions(res.data.users));
+    api.get('/catalog').then((res) => setMarketItems(res.data.items.slice(0, 12))).catch(() => {});
   }, []);
 
-  const addFriend = async (id: string) => {
-    try {
-      await api.post('/friends/request', { receiverId: id });
-      setSentIds((prev) => [...prev, id]);
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Erreur.');
+  const openItem = (item: MarketplaceItem) => {
+    if (item.saleLink) {
+      window.open(item.saleLink, '_blank', 'noopener,noreferrer');
+    } else if (item.owner) {
+      navigate(`/profile/${item.owner.id}`);
     }
   };
 
@@ -37,37 +43,33 @@ export default function Feed() {
     <div className="app-root" style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopNav />
       <div style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, minHeight: 0, boxSizing: 'border-box' }}>
-        {suggestions.length > 0 && (
+        {marketItems.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Suggestions pour vous</h3>
+            <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Marketplace</h3>
             <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, touchAction: 'pan-x', overscrollBehaviorX: 'contain' as any }}>
-              {suggestions.map((u) => (
-                <div key={u.id} className="card" style={{ padding: 12, textAlign: 'center', minWidth: 110, flexShrink: 0 }}>
-                  <div
-                    className="avatar"
-                    style={{ width: 46, height: 46, margin: '0 auto 8px', background: u.avatarUrl ? undefined : avatarColorFor(u.username), color: '#fff', cursor: 'pointer' }}
-                    onClick={() => navigate(`/profile/${u.id}`)}
-                  >
-                    {u.avatarUrl ? (
-                      <img src={resolveFileUrl(u.avatarUrl)} alt="" style={{ width: '100%', height: '100%', borderRadius: 999, objectFit: 'cover' }} />
+              {marketItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => openItem(item)}
+                  style={{ minWidth: 140, maxWidth: 140, flexShrink: 0, cursor: 'pointer', borderRadius: 12, overflow: 'hidden', position: 'relative', background: 'var(--bg-sunken)' }}
+                >
+                  <div style={{ width: '100%', height: 140 }}>
+                    {item.images[0] ? (
+                      <img src={resolveFileUrl(item.images[0])} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      u.username[0]?.toUpperCase()
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.76rem' }}>
+                        {item.name}
+                      </div>
                     )}
                   </div>
-                  <div
-                    style={{ fontWeight: 600, fontSize: '0.82rem', marginBottom: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}
-                    onClick={() => navigate(`/profile/${u.id}`)}
-                  >
-                    {u.username}
-                  </div>
-                  <button
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '5px', fontSize: '0.76rem' }}
-                    onClick={() => addFriend(u.id)}
-                    disabled={sentIds.includes(u.id)}
-                  >
-                    {sentIds.includes(u.id) ? '✓' : 'Ajouter'}
-                  </button>
+                  {item.price && (
+                    <div style={{
+                      position: 'absolute', bottom: 0, left: 0, right: 0, padding: '5px 8px',
+                      background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.76rem', fontWeight: 700,
+                    }}>
+                      {item.price}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -93,4 +95,4 @@ export default function Feed() {
       <BottomNav active="home" showVideo showCreateButton />
     </div>
   );
-          }
+}
