@@ -36,10 +36,32 @@ async function listByUser(req, res) {
   }
 }
 
-// POST /api/catalog { type, name, description, price } + fichiers "files" (jusqu'à 6)
+// GET /api/catalog?type=product|service — marketplace globale, tous vendeurs mélangés
+async function listMarketplace(req, res) {
+  try {
+    const where = {};
+    if (req.query.type && ['product', 'service'].includes(req.query.type)) {
+      where.type = req.query.type;
+    }
+
+    const items = await CatalogItem.findAll({ where, order: [['createdAt', 'DESC']], limit: 60 });
+    const userIds = [...new Set(items.map((i) => i.userId))];
+    const owners = await User.findAll({ where: { id: userIds } });
+    const ownersMap = Object.fromEntries(owners.map((o) => [o.id, sanitize(o)]));
+
+    return res.json({
+      items: items.map((i) => ({ ...withParsedImages(i), owner: ownersMap[i.userId] || null })),
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Erreur lors de la récupération de la marketplace.' });
+  }
+}
+
+// POST /api/catalog { type, name, description, price, saleLink } + fichiers "files" (jusqu'à 6)
 async function createItem(req, res) {
   try {
-    const { type, name, description, price } = req.body;
+    const { type, name, description, price, saleLink } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'Le nom est requis.' });
     if (!['product', 'service'].includes(type)) {
       return res.status(400).json({ message: 'Type invalide.' });
@@ -60,6 +82,7 @@ async function createItem(req, res) {
       price: price || null,
       fileUrl: uploadedUrls[0] || null,
       images: JSON.stringify(uploadedUrls),
+      saleLink: saleLink?.trim() || null,
     });
 
     return res.status(201).json({ item: withParsedImages(item) });
@@ -84,4 +107,4 @@ async function deleteItem(req, res) {
   }
 }
 
-module.exports = { listByUser, createItem, deleteItem };
+module.exports = { listByUser, listMarketplace, createItem, deleteItem };
