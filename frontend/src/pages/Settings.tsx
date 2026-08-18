@@ -1,11 +1,48 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, HelpCircle, ShieldCheck, FileText, Info, ChevronRight, LogOut, Gamepad2, Sparkles } from 'lucide-react';
+import { Check, HelpCircle, ShieldCheck, FileText, Info, ChevronRight, LogOut, Gamepad2, Sparkles, Sun, Moon, Image as ImageIcon, Lock, Download } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import TopNav from '../components/TopNav';
 import { WALLPAPERS } from '../utils/wallpapers';
+
+const DARK = {
+  bg: '#0a0c10',
+  surface: '#15181f',
+  surfaceRaised: '#1b1f28',
+  border: '#262b35',
+  text: '#f5f6f8',
+  textMuted: '#8b93a1',
+  accentGradient: 'linear-gradient(90deg, #ff5f8f 0%, #ff9d5c 50%, #7c3aed 100%)',
+};
+
+const HUB_TILES = [
+  { id: 'gaming', label: 'GamingHub', icon: <Gamepad2 size={30} />, gradient: 'linear-gradient(135deg, #1f7a6c 0%, #0d3b33 100%)' },
+  { id: 'divertissement', label: 'Divertissement', icon: <Sparkles size={30} />, gradient: 'linear-gradient(135deg, #ff5f8f 0%, #7c3aed 100%)' },
+];
+
+function SectionCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ background: DARK.surfaceRaised, border: `1px solid ${DARK.border}`, borderRadius: 18, padding: 20, marginBottom: 18 }}>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+      <div style={{
+        width: 34, height: 34, borderRadius: 10, background: DARK.accentGradient,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0,
+      }}>
+        {icon}
+      </div>
+      <h3 style={{ margin: 0, color: DARK.text, fontSize: '1rem', fontWeight: 800 }}>{children}</h3>
+    </div>
+  );
+}
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -56,174 +93,231 @@ export default function Settings() {
     save({ mediaAutoDownload: next });
   };
 
-  const HUBS = [
-    { id: 'gaming', label: 'GamingHub', icon: <Gamepad2 size={28} />, color: '#1f7a6c' },
-    { id: 'divertissement', label: 'Divertissement', icon: <Sparkles size={28} />, color: '#7c5cff' },
-  ];
-
   const INFO_LINKS = [
-    { page: 'help', icon: <HelpCircle size={18} />, label: 'Centre d\'aide' },
+    { page: 'help', icon: <HelpCircle size={18} />, label: "Centre d'aide" },
     { page: 'privacy', icon: <ShieldCheck size={18} />, label: 'Politique de confidentialité' },
-    { page: 'terms', icon: <FileText size={18} />, label: 'Conditions générales d\'utilisation' },
+    { page: 'terms', icon: <FileText size={18} />, label: "Conditions générales d'utilisation" },
     { page: 'about', icon: <Info size={18} />, label: 'À propos' },
   ];
 
   return (
     <div className="app-root">
       <TopNav />
-      <div style={{ maxWidth: 620, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', height: 'calc(100vh - 58px)' }}>
-        <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ marginBottom: 16 }}>
-          <ArrowLeft size={16} /> Retour aux discussions
-        </button>
+      <div
+        style={{
+          background: DARK.bg,
+          minHeight: 'calc(100dvh - 58px)',
+          height: 'calc(100dvh - 58px)',
+          overflowY: 'auto',
+          padding: '20px 16px 40px',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ maxWidth: 620, margin: '0 auto' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none',
+              color: DARK.textMuted, fontSize: '0.9rem', fontWeight: 600, padding: '8px 0', marginBottom: 16, cursor: 'pointer',
+            }}
+          >
+            ← Retour aux discussions
+          </button>
 
-        {/* Hubs */}
-        <div style={{ display: 'flex', gap: 16, marginBottom: 28, justifyContent: 'center' }}>
-          {HUBS.map((h) => (
-            <div
-              key={h.id}
-              onClick={() => navigate('/explore', { state: { hubSlug: h.id === 'gaming' ? 'gaming' : 'divertissement' } })}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, cursor: 'pointer', width: 96 }}
-            >
+          {/* Hubs — bannières pleine largeur */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
+            {HUB_TILES.map((h) => (
               <div
+                key={h.id}
+                onClick={() => navigate('/explore', { state: { hubSlug: h.id } })}
                 style={{
-                  width: 72, height: 72, borderRadius: 20, background: h.color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  flex: 1,
+                  minHeight: 120,
+                  borderRadius: 20,
+                  padding: 18,
+                  cursor: 'pointer',
+                  background: h.gradient,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
                 }}
               >
-                {h.icon}
-              </div>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, textAlign: 'center' }}>{h.label}</span>
-            </div>
-          ))}
-        </div>
-
-        <h2 style={{ marginBottom: 4 }}>Réglages</h2>
-        <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: 24 }}>
-          Personnalisez votre expérience FriEnds.
-          {saved && <span style={{ color: 'var(--accent)', marginLeft: 10, fontWeight: 600 }}><Check size={14} style={{ verticalAlign: 'middle' }} /> Enregistré</span>}
-        </p>
-
-        {/* Apparence */}
-        <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Apparence</h3>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.9rem' }}>Mode {theme === 'dark' ? 'sombre' : 'clair'}</span>
-            <button className="btn btn-secondary" onClick={toggleTheme}>
-              Passer en mode {theme === 'dark' ? 'clair' : 'sombre'}
-            </button>
-          </div>
-        </div>
-
-        {/* Fond d'écran de discussion */}
-        <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Fond d'écran des discussions</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 12 }}>
-            {WALLPAPERS.map((w) => (
-              <div key={w.id} onClick={() => selectWallpaper(w.id)} style={{ cursor: 'pointer', textAlign: 'center' }}>
-                <div
-                  style={{
-                    height: 70,
-                    borderRadius: 12,
-                    background: w.isPattern ? 'var(--bg)' : w.preview,
-                    backgroundImage: w.isPattern ? w.preview : undefined,
-                    backgroundSize: w.isPattern ? '14px 14px' : undefined,
-                    border: wallpaper === w.id ? '3px solid var(--accent)' : '1px solid var(--border)',
-                    marginBottom: 6,
-                    position: 'relative',
-                  }}
-                >
-                  {wallpaper === w.id && (
-                    <div style={{ position: 'absolute', top: 6, right: 6, background: 'var(--accent)', borderRadius: 999, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Check size={12} color="#fff" />
-                    </div>
-                  )}
+                <div style={{
+                  width: 46, height: 46, borderRadius: 12, background: 'rgba(0,0,0,0.28)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                }}>
+                  {h.icon}
                 </div>
-                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{w.label}</span>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{h.label}</div>
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Confidentialité */}
-        <div className="card" style={{ padding: 20, marginBottom: 20 }}>
-          <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Confidentialité</h3>
+          <h2 style={{ color: DARK.text, margin: '0 0 4px', fontSize: '1.4rem', fontWeight: 800 }}>Réglages</h2>
+          <p style={{ color: DARK.textMuted, margin: '0 0 22px', fontSize: '0.88rem' }}>
+            Personnalisez votre expérience FriEnds.
+            {saved && (
+              <span style={{ color: '#4ade80', marginLeft: 10, fontWeight: 700 }}>
+                <Check size={14} style={{ verticalAlign: 'middle' }} /> Enregistré
+              </span>
+            )}
+          </p>
 
-          <div style={{ marginBottom: 18 }}>
-            <label className="field-label">Qui peut voir ma photo de profil</label>
-            <div style={{ display: 'flex', gap: 8 }}>
+          {/* Apparence */}
+          <SectionCard>
+            <SectionTitle icon={theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}>Apparence</SectionTitle>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: DARK.text, fontSize: '0.9rem' }}>Mode {theme === 'dark' ? 'sombre' : 'clair'}</span>
               <button
-                className={profileVisibility === 'everyone' ? 'btn btn-primary' : 'btn btn-secondary'}
-                style={{ flex: 1 }}
-                onClick={() => changeVisibility('everyone')}
+                onClick={toggleTheme}
+                style={{
+                  border: `1px solid ${DARK.border}`, background: DARK.surface, color: DARK.text,
+                  borderRadius: 999, padding: '9px 16px', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                }}
               >
-                Tout le monde
-              </button>
-              <button
-                className={profileVisibility === 'friends' ? 'btn btn-primary' : 'btn btn-secondary'}
-                style={{ flex: 1 }}
-                onClick={() => changeVisibility('friends')}
-              >
-                Amis uniquement
+                Passer en mode {theme === 'dark' ? 'clair' : 'sombre'}
               </button>
             </div>
-          </div>
+          </SectionCard>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>Téléchargement automatique des médias</div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Si désactivé, appuyez sur une image/vidéo reçue pour l'afficher.
+          {/* Fond d'écran */}
+          <SectionCard>
+            <SectionTitle icon={<ImageIcon size={18} />}>Fond d'écran des discussions</SectionTitle>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 12 }}>
+              {WALLPAPERS.map((w) => (
+                <div key={w.id} onClick={() => selectWallpaper(w.id)} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                  <div
+                    style={{
+                      height: 70,
+                      borderRadius: 12,
+                      background: w.isPattern ? DARK.surface : w.preview,
+                      backgroundImage: w.isPattern ? w.preview : undefined,
+                      backgroundSize: w.isPattern ? '14px 14px' : undefined,
+                      border: wallpaper === w.id ? '2px solid transparent' : `1px solid ${DARK.border}`,
+                      backgroundOrigin: 'border-box',
+                      boxShadow: wallpaper === w.id ? '0 0 0 2px #ff5f8f' : undefined,
+                      marginBottom: 6,
+                      position: 'relative',
+                    }}
+                  >
+                    {wallpaper === w.id && (
+                      <div style={{
+                        position: 'absolute', top: 6, right: 6, background: DARK.accentGradient, borderRadius: 999,
+                        width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <Check size={12} color="#fff" />
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '0.76rem', color: DARK.textMuted }}>{w.label}</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Confidentialité */}
+          <SectionCard>
+            <SectionTitle icon={<Lock size={18} />}>Confidentialité</SectionTitle>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', color: DARK.textMuted, fontSize: '0.8rem', marginBottom: 8 }}>
+                Qui peut voir ma photo de profil
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => changeVisibility('everyone')}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
+                    background: profileVisibility === 'everyone' ? DARK.accentGradient : DARK.surface,
+                    color: profileVisibility === 'everyone' ? '#fff' : DARK.text,
+                    boxShadow: profileVisibility === 'everyone' ? 'none' : `inset 0 0 0 1px ${DARK.border}`,
+                  }}
+                >
+                  Tout le monde
+                </button>
+                <button
+                  onClick={() => changeVisibility('friends')}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 10, border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer',
+                    background: profileVisibility === 'friends' ? DARK.accentGradient : DARK.surface,
+                    color: profileVisibility === 'friends' ? '#fff' : DARK.text,
+                    boxShadow: profileVisibility === 'friends' ? 'none' : `inset 0 0 0 1px ${DARK.border}`,
+                  }}
+                >
+                  Amis uniquement
+                </button>
               </div>
             </div>
-            <button className="btn btn-secondary" onClick={toggleMediaAutoDownload} disabled={saving}>
-              {mediaAutoDownload ? 'Activé' : 'Désactivé'}
-            </button>
-          </div>
-        </div>
 
-        {/* Aide et informations */}
-        <div className="card" style={{ padding: 8, marginBottom: 20 }}>
-          {INFO_LINKS.map((link, i) => (
-            <div
-              key={link.page}
-              onClick={() => navigate(`/info/${link.page}`)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px',
-                cursor: 'pointer', borderBottom: i < INFO_LINKS.length - 1 ? '1px solid var(--border)' : 'none',
-              }}
-            >
-              <span style={{ color: 'var(--accent-strong)' }}>{link.icon}</span>
-              <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>{link.label}</span>
-              <ChevronRight size={16} color="var(--text-muted)" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Download size={16} color={DARK.textMuted} />
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: DARK.text }}>Téléchargement auto des médias</div>
+                  <div style={{ fontSize: '0.76rem', color: DARK.textMuted }}>
+                    Si désactivé, appuyez sur un média pour l'afficher.
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={toggleMediaAutoDownload}
+                disabled={saving}
+                style={{
+                  flexShrink: 0, border: 'none', borderRadius: 999, padding: '8px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                  background: mediaAutoDownload ? DARK.accentGradient : DARK.surface,
+                  color: mediaAutoDownload ? '#fff' : DARK.textMuted,
+                  boxShadow: mediaAutoDownload ? 'none' : `inset 0 0 0 1px ${DARK.border}`,
+                }}
+              >
+                {mediaAutoDownload ? 'Activé' : 'Désactivé'}
+              </button>
             </div>
-          ))}
-        </div>
+          </SectionCard>
 
-        {/* Compte */}
-        <div className="card" style={{ padding: 8, marginBottom: 20 }}>
-          {user?.isAdmin && (
+          {/* Aide et informations */}
+          <SectionCard>
+            {INFO_LINKS.map((link, i) => (
+              <div
+                key={link.page}
+                onClick={() => navigate(`/info/${link.page}`)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px',
+                  cursor: 'pointer', borderBottom: i < INFO_LINKS.length - 1 ? `1px solid ${DARK.border}` : 'none',
+                }}
+              >
+                <span style={{ color: '#ff5f8f' }}>{link.icon}</span>
+                <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500, color: DARK.text }}>{link.label}</span>
+                <ChevronRight size={16} color={DARK.textMuted} />
+              </div>
+            ))}
+          </SectionCard>
+
+          {/* Compte */}
+          <SectionCard>
+            {user?.isAdmin && (
+              <div
+                onClick={() => navigate('/admin/invitations')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px',
+                  cursor: 'pointer', borderBottom: `1px solid ${DARK.border}`,
+                }}
+              >
+                <span style={{ color: '#ff5f8f' }}><ShieldCheck size={18} /></span>
+                <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500, color: DARK.text }}>Administration</span>
+                <ChevronRight size={16} color={DARK.textMuted} />
+              </div>
+            )}
             <div
-              onClick={() => navigate('/admin/invitations')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px',
-                cursor: 'pointer', borderBottom: '1px solid var(--border)',
-              }}
+              onClick={logout}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px', cursor: 'pointer', color: '#ff6b6b' }}
             >
-              <span style={{ color: 'var(--accent-strong)' }}><ShieldCheck size={18} /></span>
-              <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>Administration</span>
-              <ChevronRight size={16} color="var(--text-muted)" />
+              <LogOut size={18} />
+              <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>Déconnexion</span>
             </div>
-          )}
-          <div
-            onClick={logout}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 12px', cursor: 'pointer', color: 'var(--danger)' }}
-          >
-            <LogOut size={18} />
-            <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 500 }}>Déconnexion</span>
-          </div>
+          </SectionCard>
         </div>
       </div>
     </div>
   );
-      }
+        }
