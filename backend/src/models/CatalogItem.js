@@ -1,4 +1,4 @@
- const { DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
 const CatalogItem = sequelize.define(
@@ -19,6 +19,7 @@ const CatalogItem = sequelize.define(
     price: { type: DataTypes.STRING, allowNull: true },
     fileUrl: { type: DataTypes.STRING, allowNull: true },
     images: { type: DataTypes.TEXT, defaultValue: '[]' }, // tableau JSON d'URLs
+    saleLink: { type: DataTypes.STRING, allowNull: true }, // lien de vente propre à cet article
   },
   {
     tableName: 'catalog_items',
