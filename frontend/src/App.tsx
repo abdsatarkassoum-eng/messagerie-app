@@ -96,7 +96,8 @@ export default function App() {
               <Explore />
             </ProtectedRoute>
           }
-          <Route
+        />
+        <Route
           path="/live/:postId"
           element={
             <ProtectedRoute>
@@ -140,4 +141,4 @@ export default function App() {
       </Routes>
     </Suspense>
   );
-        }
+}
