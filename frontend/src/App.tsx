@@ -96,6 +96,13 @@ export default function App() {
               <Explore />
             </ProtectedRoute>
           }
+          <Route
+          path="/live/:postId"
+          element={
+            <ProtectedRoute>
+              <LiveRoom />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/info/:page"
