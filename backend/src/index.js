@@ -61,6 +61,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/calls', callRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/live', liveRoutes);
 app.use('/api/hubs', hubRoutes);
 
 // Gestion des erreurs générique
