@@ -13,9 +13,11 @@ const Post = sequelize.define(
     content: { type: DataTypes.TEXT, allowNull: true },
     fileUrl: { type: DataTypes.STRING, allowNull: true },
     type: {
-      type: DataTypes.ENUM('text', 'image', 'video'),
+      type: DataTypes.ENUM('text', 'image', 'video', 'live'),
       defaultValue: 'text',
     },
+    roomName: { type: DataTypes.STRING, allowNull: true },
+    isLive: { type: DataTypes.BOOLEAN, defaultValue: false },
   },
   {
     tableName: 'posts',
