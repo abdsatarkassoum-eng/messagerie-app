@@ -4,7 +4,7 @@ import api from '../services/api';
 import { PostItem, PostComment } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { Heart, MessageCircle, Trash2, Send, BadgeCheck } from 'lucide-react';
+import { Heart, MessageCircle, Trash2, Send, BadgeCheck, Radio } from 'lucide-react';
 
 interface Props {
   post: PostItem;
@@ -50,6 +50,7 @@ export default function PostCard({ post, onDeleted }: Props) {
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
 
   const verified = isCurrentlyVerified((post.author as any).isVerified, (post.author as any).verifiedUntil);
+  const isLive = post.type === 'live' && (post as any).isLive;
 
   const toggleLike = async () => {
     setLiked((v) => !v);
@@ -92,7 +93,7 @@ export default function PostCard({ post, onDeleted }: Props) {
         maxWidth: '100%',
         boxSizing: 'border-box',
         background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
+        border: isLive ? '1px solid #ff3b30' : '1px solid var(--border)',
         borderRadius: 18,
         padding: 16,
         marginBottom: 16,
@@ -121,7 +122,7 @@ export default function PostCard({ post, onDeleted }: Props) {
           </div>
           <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{timeAgo(post.createdAt)}</div>
         </div>
-        {post.isMine && (
+        {post.isMine && !isLive && (
           <button className="btn btn-ghost btn-icon" onClick={handleDelete} title="Supprimer">
             <Trash2 size={16} />
           </button>
@@ -135,6 +136,34 @@ export default function PostCard({ post, onDeleted }: Props) {
       )}
       {post.type === 'video' && post.fileUrl && (
         <video src={resolveFileUrl(post.fileUrl)} controls style={mediaStyle} />
+      )}
+
+      {post.type === 'live' && (
+        <div
+          onClick={() => isLive && navigate(`/live/${post.id}`)}
+          style={{
+            ...mediaStyle,
+            height: 180,
+            background: 'linear-gradient(135deg, #1a0000, #3a0a0a)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            cursor: isLive ? 'pointer' : 'default',
+          }}
+        >
+          {isLive ? (
+            <>
+              <span style={{ background: '#ff3b30', color: '#fff', fontWeight: 800, fontSize: '0.76rem', padding: '5px 12px', borderRadius: 999, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Radio size={14} /> EN DIRECT
+              </span>
+              <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Rejoindre le live</span>
+            </>
+          ) : (
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.86rem' }}>Live terminé</span>
+          )}
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 16, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
@@ -192,4 +221,4 @@ export default function PostCard({ post, onDeleted }: Props) {
       )}
     </div>
   );
-                                         }
+                  }
