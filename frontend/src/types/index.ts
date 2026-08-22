@@ -116,18 +116,20 @@ export interface PostComment {
   author: UserProfile;
 }
 
-export interface PostItem {
+ export interface PostItem {
   id: string;
   author: UserProfile;
   content: string | null;
   fileUrl: string | null;
-  type: 'text' | 'image' | 'video';
+  type: 'text' | 'image' | 'video' | 'live';
+  roomName?: string | null;
+  isLive?: boolean;
   createdAt: string;
   likesCount: number;
   commentsCount: number;
   likedByMe: boolean;
   isMine: boolean;
-}
+ }
 
 export interface ProfileGroup {
   id: string;
