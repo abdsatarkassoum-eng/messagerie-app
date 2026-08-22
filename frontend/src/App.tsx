@@ -16,6 +16,7 @@ const AdminInvitations = lazy(() => import('./pages/AdminInvitations'));
 const InfoPage = lazy(() => import('./pages/InfoPage'));
 const SubscriptionReturn = lazy(() => import('./pages/SubscriptionReturn'));
 const Explore = lazy(() => import('./pages/Explore'));
+const LiveRoom = lazy(() => import('./pages/LiveRoom'));
 
 function PageLoader() {
   return (
