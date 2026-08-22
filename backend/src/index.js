@@ -25,6 +25,7 @@ const pushRoutes = require('./routes/push.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const callRoutes = require('./routes/call.routes');
 const subscriptionRoutes = require('./routes/subscription.routes');
+const liveRoutes = require('./routes/live.routes');
 const hubRoutes = require('./routes/hub.routes');
 
 const app = express();
