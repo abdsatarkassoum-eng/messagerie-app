@@ -64,7 +64,13 @@ export default function LiveRoom() {
         r.on(RoomEvent.ParticipantConnected, () => setViewerCount((c) => c + 1));
         r.on(RoomEvent.ParticipantDisconnected, () => setViewerCount((c) => Math.max(0, c - 1)));
 
+        r.on(RoomEvent.Disconnected, (reason) => {
+          console.log('[LIVE] Déconnecté, raison =', reason);
+        });
+
+        console.log('[LIVE] Tentative de connexion à', url);
         await r.connect(url, token);
+        console.log('[LIVE] Connexion réussie');
         setViewerCount(r.remoteParticipants.size);
 
         if (host) {
@@ -79,8 +85,10 @@ export default function LiveRoom() {
         setRoom(r);
         setConnecting(false);
       } catch (err: any) {
+        console.error('[LIVE] Erreur de connexion :', err);
         if (!cancelled) {
-          setError(err.response?.data?.message || 'Impossible de rejoindre le live.');
+          const detail = err?.message || err?.response?.data?.message || 'Erreur inconnue';
+          setError(`Impossible de rejoindre le live. Détail : ${detail}`);
           setConnecting(false);
         }
       }
@@ -143,7 +151,7 @@ export default function LiveRoom() {
 
       {error && (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center', justifyContent: 'center', color: '#fff', padding: 30, textAlign: 'center' }}>
-          <p>{error}</p>
+          <p style={{ fontSize: '0.9rem', wordBreak: 'break-word' }}>{error}</p>
           <button className="btn btn-primary" onClick={() => navigate('/feed')}>Retour au fil</button>
         </div>
       )}
@@ -195,4 +203,4 @@ export default function LiveRoom() {
       )}
     </div>
   );
-}
+      }
