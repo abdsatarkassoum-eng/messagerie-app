@@ -157,6 +157,10 @@ async function syncDatabase() {
       `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "categoryId" UUID`,
       `ALTER TABLE conversations ADD COLUMN IF NOT EXISTS "isPublic" BOOLEAN DEFAULT false`,
       `ALTER TABLE catalog_items ADD COLUMN IF NOT EXISTS "saleLink" VARCHAR(255)`,
+      `ALTER TABLE posts ADD COLUMN IF NOT EXISTS "roomName" VARCHAR(255)`,
+      `ALTER TABLE posts ADD COLUMN IF NOT EXISTS "isLive" BOOLEAN DEFAULT false`,
+      `ALTER TYPE "enum_posts_type" ADD VALUE IF NOT EXISTS 'live'`,
+      
     ];
 
     for (const query of migrations) {
