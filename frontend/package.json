@@ -1,4 +1,4 @@
- {
+{
   "name": "messagerie-frontend",
   "version": "1.0.0",
   "private": true,
@@ -16,8 +16,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.24.1",
-    "socket.io-client": "^4.7.5"
-    "livekit-client": "^2.5.0",
+    "socket.io-client": "^4.7.5",
+    "livekit-client": "^2.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
@@ -26,4 +26,4 @@
     "typescript": "^5.5.3",
     "vite": "^5.3.4"
   }
- }
+}
