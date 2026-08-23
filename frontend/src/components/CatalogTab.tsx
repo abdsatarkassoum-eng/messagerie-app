@@ -4,7 +4,7 @@ import api from '../services/api';
 import { LinkPreview } from '../types';
 import { resolveFileUrl } from '../utils/url';
 import { avatarColorFor } from '../utils/avatarColor';
-import { Store, Briefcase, ExternalLink, MessageCircle, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Store, Briefcase, ExternalLink, MessageCircle, Pencil, Plus, Trash2, X, Rocket } from 'lucide-react';
 
 interface Props {
   userId: string;
@@ -19,7 +19,16 @@ interface CatalogItemData {
   price: string | null;
   images: string[];
   saleLink: string | null;
+  boostAmount?: number;
+  boostedUntil?: string | null;
+  isBoosted?: boolean;
 }
+
+const BOOST_OPTIONS = [
+  { days: 1, price: 500 },
+  { days: 3, price: 1300 },
+  { days: 7, price: 2800 },
+];
 
 function PreviewCard({
   preview,
@@ -107,6 +116,11 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
   const [itemFiles, setItemFiles] = useState<File[]>([]);
   const [creatingItem, setCreatingItem] = useState(false);
 
+  const [boostingItem, setBoostingItem] = useState<CatalogItemData | null>(null);
+  const [boostDays, setBoostDays] = useState(1);
+  const [boostLoading, setBoostLoading] = useState(false);
+  const [boostStatus, setBoostStatus] = useState('');
+
   const linkField = type === 'product' ? 'productsLink' : 'servicesLink';
   const previewField = type === 'product' ? 'productsLinkPreview' : 'servicesLinkPreview';
   const label = type === 'product' ? 'boutique' : 'page de services';
@@ -192,13 +206,50 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
+  const startBoost = async () => {
+    if (!boostingItem) return;
+    setBoostLoading(true);
+    setBoostStatus('Redirection vers le paiement…');
+    try {
+      const res = await api.post('/boost/initiate', { itemId: boostingItem.id, days: boostDays });
+      window.open(res.data.checkoutUrl, '_blank');
+      setBoostStatus('En attente du paiement…');
+
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const checkRes = await api.get(`/boost/check/${res.data.transactionId}`);
+          if (checkRes.data.confirmed) {
+            clearInterval(poll);
+            setBoostStatus('Boost activé ! 🚀');
+            setItems((prev) => prev.map((i) => (i.id === boostingItem.id ? { ...i, ...checkRes.data.item, isBoosted: true } : i)));
+            setTimeout(() => {
+              setBoostingItem(null);
+              setBoostLoading(false);
+              setBoostStatus('');
+            }, 1200);
+          } else if (attempts >= 20) {
+            clearInterval(poll);
+            setBoostStatus("Paiement non confirmé. Si vous avez payé, revenez plus tard.");
+            setBoostLoading(false);
+          }
+        } catch {
+          // on continue à réessayer
+        }
+      }, 3000);
+    } catch (err: any) {
+      setBoostStatus(err.response?.data?.message || 'Erreur lors du boostage.');
+      setBoostLoading(false);
+    }
+  };
+
   if (loading) {
     return <p style={{ color: 'var(--text-muted)' }}>Chargement…</p>;
   }
 
   return (
     <div>
-      {/* Lien externe global (boutique Facebook/WhatsApp/etc.) */}
       {isSelf ? (
         <div className="card" style={{ padding: 24, marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -284,7 +335,6 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
         )
       )}
 
-      {/* Fiches produits/services publiées dans l'app */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem' }}>
           {type === 'product' ? 'Articles publiés' : 'Services publiés'}
@@ -304,7 +354,15 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
         {items.map((item) => (
-          <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div key={item.id} className="card" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
+            {item.isBoosted && (
+              <span style={{
+                position: 'absolute', top: 8, left: 8, zIndex: 2, background: '#ffb84d', color: '#000',
+                fontSize: '0.68rem', fontWeight: 800, padding: '3px 8px', borderRadius: 999,
+              }}>
+                Sponsorisé
+              </span>
+            )}
             <div style={{ width: '100%', height: 110, background: 'var(--bg-sunken)' }}>
               {item.images[0] && (
                 <img src={resolveFileUrl(item.images[0])} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -315,16 +373,25 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
                 {item.name}
               </div>
               {item.price && <div style={{ fontSize: '0.8rem', color: 'var(--accent-strong)', fontWeight: 700, marginBottom: 8 }}>{item.price}</div>}
-              <div style={{ display: 'flex', gap: 6 }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {item.saleLink && (
                   <a href={item.saleLink} target="_blank" rel="noreferrer" className="btn btn-secondary" style={{ flex: 1, padding: '5px', fontSize: '0.74rem', textDecoration: 'none', textAlign: 'center' }}>
                     Voir
                   </a>
                 )}
                 {isSelf && (
-                  <button className="btn btn-ghost btn-icon" onClick={() => deleteItem(item.id)} title="Supprimer">
-                    <Trash2 size={14} />
-                  </button>
+                  <>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ flex: 1, padding: '5px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                      onClick={() => { setBoostingItem(item); setBoostDays(1); setBoostStatus(''); }}
+                    >
+                      <Rocket size={12} /> Booster
+                    </button>
+                    <button className="btn btn-ghost btn-icon" onClick={() => deleteItem(item.id)} title="Supprimer">
+                      <Trash2 size={14} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -367,6 +434,42 @@ export default function CatalogTab({ userId, type, isSelf }: Props) {
           </div>
         </div>
       )}
+
+      {boostingItem && (
+        <div className="modal-backdrop" onClick={() => !boostLoading && setBoostingItem(null)}>
+          <div className="card" style={{ padding: 20, maxWidth: 380, width: '92%' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0 }}>Booster "{boostingItem.name}"</h3>
+              {!boostLoading && (
+                <button className="btn btn-ghost btn-icon" onClick={() => setBoostingItem(null)}><X size={18} /></button>
+              )}
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+              Fait remonter votre article en tête de la Marketplace, avec un badge "Sponsorisé".
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+              {BOOST_OPTIONS.map((opt) => (
+                <button
+                  key={opt.days}
+                  onClick={() => setBoostDays(opt.days)}
+                  disabled={boostLoading}
+                  className={boostDays === opt.days ? 'btn btn-primary' : 'btn btn-secondary'}
+                  style={{ justifyContent: 'space-between', padding: '12px 16px' }}
+                >
+                  <span>{opt.days} jour{opt.days > 1 ? 's' : ''}</span>
+                  <span>{opt.price.toLocaleString('fr-FR')} FCFA</span>
+                </button>
+              ))}
+            </div>
+            {boostStatus && (
+              <p style={{ fontSize: '0.82rem', color: 'var(--accent-strong)', marginBottom: 14, textAlign: 'center' }}>{boostStatus}</p>
+            )}
+            <button className="btn btn-primary" onClick={startBoost} disabled={boostLoading} style={{ width: '100%' }}>
+              {boostLoading ? 'Traitement…' : 'Payer et booster'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-                           }
+    }
