@@ -45,7 +45,13 @@ export default function Feed() {
       <div style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: '20px 16px', overflowY: 'auto', overflowX: 'hidden', flex: 1, minHeight: 0, boxSizing: 'border-box' }}>
         {marketItems.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Marketplace</h3>
+            <button
+              onClick={() => navigate('/marketplace')}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}
+            >
+              <h3 style={{ fontSize: '0.95rem', margin: 0, color: 'var(--text)' }}>Marketplace</h3>
+              <span style={{ fontSize: '0.78rem', color: 'var(--accent-strong)', fontWeight: 600 }}>Voir tout →</span>
+            </button>
             <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, touchAction: 'pan-x', overscrollBehaviorX: 'contain' as any }}>
               {marketItems.map((item) => (
                 <div
