@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { CatalogItem, User } = require('../models');
 const { sanitize } = require('./auth.controller');
 const uploadFile = require('../utils/uploadFile');
@@ -10,9 +11,9 @@ function withParsedImages(item) {
   } catch {
     images = [];
   }
-  // Compatibilité : anciens articles créés avec une seule photo (fileUrl)
   if (images.length === 0 && json.fileUrl) images = [json.fileUrl];
-  return { ...json, images };
+  const isBoosted = !!(json.boostedUntil && new Date(json.boostedUntil) > new Date());
+  return { ...json, images, isBoosted };
 }
 
 // GET /api/catalog/user/:id?type=product|service
@@ -36,21 +37,35 @@ async function listByUser(req, res) {
   }
 }
 
-// GET /api/catalog?type=product|service — marketplace globale, tous vendeurs mélangés
+// GET /api/catalog?type=product|service&search=... — marketplace globale, tous vendeurs mélangés,
+// produits boostés en premier (triés par montant payé), puis les autres par date
 async function listMarketplace(req, res) {
   try {
     const where = {};
     if (req.query.type && ['product', 'service'].includes(req.query.type)) {
       where.type = req.query.type;
     }
+    if (req.query.search && req.query.search.trim()) {
+      where.name = { [Op.iLike]: `%${req.query.search.trim()}%` };
+    }
 
-    const items = await CatalogItem.findAll({ where, order: [['createdAt', 'DESC']], limit: 60 });
-    const userIds = [...new Set(items.map((i) => i.userId))];
+    const items = await CatalogItem.findAll({ where, limit: 120 });
+    const now = new Date();
+
+    const boosted = items.filter((i) => i.boostedUntil && new Date(i.boostedUntil) > now);
+    const regular = items.filter((i) => !i.boostedUntil || new Date(i.boostedUntil) <= now);
+
+    boosted.sort((a, b) => b.boostAmount - a.boostAmount);
+    regular.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const ordered = [...boosted, ...regular];
+
+    const userIds = [...new Set(ordered.map((i) => i.userId))];
     const owners = await User.findAll({ where: { id: userIds } });
     const ownersMap = Object.fromEntries(owners.map((o) => [o.id, sanitize(o)]));
 
     return res.json({
-      items: items.map((i) => ({ ...withParsedImages(i), owner: ownersMap[i.userId] || null })),
+      items: ordered.map((i) => ({ ...withParsedImages(i), owner: ownersMap[i.userId] || null })),
     });
   } catch (err) {
     console.error(err);
