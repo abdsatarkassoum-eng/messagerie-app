@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Room, RoomEvent, Track, RemoteTrack, RemoteParticipant } from 'livekit-client';
+import { Room, RoomEvent, Track, RemoteTrack, RemoteParticipant, LocalTrack } from 'livekit-client';
 import api from '../services/api';
 import { ArrowLeft, Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff } from 'lucide-react';
 
@@ -20,6 +20,7 @@ export default function LiveRoom() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteContainerRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<Room | null>(null);
+  const localCamTrackRef = useRef<LocalTrack | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,21 +65,14 @@ export default function LiveRoom() {
         r.on(RoomEvent.ParticipantConnected, () => setViewerCount((c) => c + 1));
         r.on(RoomEvent.ParticipantDisconnected, () => setViewerCount((c) => Math.max(0, c - 1)));
 
-        r.on(RoomEvent.Disconnected, (reason) => {
-          console.log('[LIVE] Déconnecté, raison =', reason);
-        });
-
-        console.log('[LIVE] Tentative de connexion à', url);
         await r.connect(url, token);
-        console.log('[LIVE] Connexion réussie');
         setViewerCount(r.remoteParticipants.size);
 
         if (host) {
-          await r.localParticipant.setCameraEnabled(true);
           await r.localParticipant.setMicrophoneEnabled(true);
-          const camPub = Array.from(r.localParticipant.videoTrackPublications.values())[0];
-          if (camPub?.track && localVideoRef.current) {
-            camPub.track.attach(localVideoRef.current);
+          const camPub = await r.localParticipant.setCameraEnabled(true);
+          if (camPub?.track) {
+            localCamTrackRef.current = camPub.track as unknown as LocalTrack;
           }
         }
 
@@ -103,6 +97,14 @@ export default function LiveRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
+  // Attache le flux caméra local UNE FOIS que l'élément <video> existe vraiment à l'écran
+  // (il n'existe pas encore pendant que "connecting" est true).
+  useEffect(() => {
+    if (!connecting && isHost && localCamTrackRef.current && localVideoRef.current) {
+      (localCamTrackRef.current as any).attach(localVideoRef.current);
+    }
+  }, [connecting, isHost]);
+
   const toggleMic = async () => {
     if (!room) return;
     const next = !micOn;
@@ -113,7 +115,11 @@ export default function LiveRoom() {
   const toggleCam = async () => {
     if (!room) return;
     const next = !camOn;
-    await room.localParticipant.setCameraEnabled(next);
+    const pub = await room.localParticipant.setCameraEnabled(next);
+    if (next && pub?.track && localVideoRef.current) {
+      localCamTrackRef.current = pub.track as unknown as LocalTrack;
+      (pub.track as any).attach(localVideoRef.current);
+    }
     setCamOn(next);
   };
 
@@ -203,4 +209,4 @@ export default function LiveRoom() {
       )}
     </div>
   );
-                                    }
+      }
