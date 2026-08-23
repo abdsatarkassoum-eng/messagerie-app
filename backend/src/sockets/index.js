@@ -81,6 +81,30 @@ function initSockets(io) {
     socket.on('call:end', ({ targetUserId }) => {
       io.to(`user:${targetUserId}`).emit('call:ended', { fromUserId: userId });
     });
+    // --- Live streaming ---
+    socket.on('live:join', ({ postId }) => {
+      socket.join(`live:${postId}`);
+    });
+
+    socket.on('live:leave', ({ postId }) => {
+      socket.leave(`live:${postId}`);
+    });
+
+    socket.on('live:comment', async ({ postId, content }) => {
+      if (!content?.trim()) return;
+      const user = await User.findByPk(userId);
+      io.to(`live:${postId}`).emit('live:comment', {
+        id: `${Date.now()}-${userId}`,
+        content: content.trim(),
+        username: user?.username || 'Utilisateur',
+        avatarUrl: user?.avatarUrl || null,
+        createdAt: new Date(),
+      });
+    });
+
+    socket.on('live:reaction', ({ postId }) => {
+      io.to(`live:${postId}`).emit('live:reaction', { fromUserId: userId });
+    });
 
     socket.on('disconnect', async () => {
       await User.update(
