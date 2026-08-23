@@ -17,6 +17,7 @@ const InfoPage = lazy(() => import('./pages/InfoPage'));
 const SubscriptionReturn = lazy(() => import('./pages/SubscriptionReturn'));
 const Explore = lazy(() => import('./pages/Explore'));
 const LiveRoom = lazy(() => import('./pages/LiveRoom'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
 
 function PageLoader() {
   return (
@@ -98,6 +99,14 @@ export default function App() {
           }
         />
         <Route
+          path="/marketplace"
+          element={
+            <ProtectedRoute>
+              <Marketplace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/live/:postId"
           element={
             <ProtectedRoute>
@@ -141,4 +150,4 @@ export default function App() {
       </Routes>
     </Suspense>
   );
-}
+              }
