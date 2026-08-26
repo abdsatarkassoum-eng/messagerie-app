@@ -113,7 +113,13 @@ async function listFeed(req, res) {
   try {
     const userId = req.user.id;
 
-    const posts = await Post.findAll({
+     const posts = await Post.findAll({
+      where: {
+        [Op.or]: [
+          { type: { [Op.ne]: 'live' } },
+          { type: 'live', isLive: true },
+        ],
+      },
       order: [['createdAt', 'DESC']],
       limit: 50,
     });
