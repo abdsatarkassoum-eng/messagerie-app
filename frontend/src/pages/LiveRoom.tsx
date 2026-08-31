@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Room, RoomEvent, Track, RemoteTrack, RemoteParticipant, LocalTrack, LocalVideoTrack } from 'livekit-client';
+import { Room, RoomEvent, Track, RemoteTrack, RemoteParticipant, LocalVideoTrack } from 'livekit-client';
 import api from '../services/api';
 import { useSocket } from '../context/SocketContext';
-import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, RefreshCw, Heart, Send } from 'lucide-react';
 
 interface LiveComment {
@@ -23,7 +22,6 @@ export default function LiveRoom() {
   const location = useLocation();
   const navigate = useNavigate();
   const socket = useSocket();
-  const { user } = useAuth();
   const navState = (location.state as any) || {};
 
   const [connecting, setConnecting] = useState(true);
@@ -31,6 +29,7 @@ export default function LiveRoom() {
   const [isHost, setIsHost] = useState<boolean>(!!navState.isHost);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [viewerCount, setViewerCount] = useState(0);
   const [comments, setComments] = useState<LiveComment[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -93,7 +92,10 @@ export default function LiveRoom() {
           await r.localParticipant.setMicrophoneEnabled(true);
           const camPub = await r.localParticipant.setCameraEnabled(true);
           if (camPub?.track) {
-            localCamTrackRef.current = camPub.track as LocalVideoTrack;
+            const track = camPub.track as LocalVideoTrack;
+            localCamTrackRef.current = track;
+            const settings = track.mediaStreamTrack.getSettings();
+            setFacingMode(settings.facingMode === 'environment' ? 'environment' : 'user');
           }
         }
 
@@ -123,7 +125,6 @@ export default function LiveRoom() {
     }
   }, [connecting, isHost]);
 
-  // Chat + réactions en direct via Socket.io
   useEffect(() => {
     if (!socket || !postId) return;
 
@@ -177,8 +178,11 @@ export default function LiveRoom() {
     const next = !camOn;
     const pub = await roomRef.current.localParticipant.setCameraEnabled(next);
     if (next && pub?.track && localVideoRef.current) {
-      localCamTrackRef.current = pub.track as LocalVideoTrack;
-      localCamTrackRef.current.attach(localVideoRef.current);
+      const track = pub.track as LocalVideoTrack;
+      localCamTrackRef.current = track;
+      track.attach(localVideoRef.current);
+      const settings = track.mediaStreamTrack.getSettings();
+      setFacingMode(settings.facingMode === 'environment' ? 'environment' : 'user');
     }
     setCamOn(next);
   };
@@ -186,9 +190,10 @@ export default function LiveRoom() {
   const switchCamera = async () => {
     if (!localCamTrackRef.current) return;
     try {
-      const currentFacing = (localCamTrackRef.current.mediaStreamTrack.getSettings().facingMode) || 'user';
-      const nextFacing = currentFacing === 'environment' ? 'user' : 'environment';
+      const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
       await localCamTrackRef.current.restartTrack({ facingMode: nextFacing });
+      const settings = localCamTrackRef.current.mediaStreamTrack.getSettings();
+      setFacingMode(settings.facingMode === 'environment' ? 'environment' : 'user');
     } catch (err) {
       console.error('[LIVE] Impossible de changer de caméra :', err);
     }
@@ -234,7 +239,18 @@ export default function LiveRoom() {
       )}
 
       {!connecting && !error && isHost && (
-        <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+        <video
+          ref={localVideoRef}
+          autoPlay
+          muted
+          playsInline
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+          }}
+        />
       )}
 
       {!connecting && !error && !isHost && (
@@ -295,8 +311,8 @@ export default function LiveRoom() {
         </div>
       )}
 
-      {/* Réaction cœur, à droite */}
-      {!connecting && !error && (
+      {/* Réaction cœur — spectateurs : flottant à droite. Hôte : intégré à la colonne de contrôles. */}
+      {!connecting && !error && !isHost && (
         <button
           onClick={sendReaction}
           style={{
@@ -334,7 +350,7 @@ export default function LiveRoom() {
         </div>
       )}
 
-      {/* Contrôles hôte, remontés au-dessus du champ de saisie */}
+      {/* Colonne de contrôles hôte — le cœur y est intégré pour ne jamais chevaucher */}
       {!connecting && !error && isHost && (
         <div style={{ position: 'absolute', bottom: 76, right: 12, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 20 }}>
           <button
@@ -354,6 +370,12 @@ export default function LiveRoom() {
             style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <RefreshCw size={18} />
+          </button>
+          <button
+            onClick={sendReaction}
+            style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Heart size={18} />
           </button>
           <button
             onClick={leave}
@@ -376,4 +398,4 @@ export default function LiveRoom() {
       )}
     </div>
   );
-      }
+        }
