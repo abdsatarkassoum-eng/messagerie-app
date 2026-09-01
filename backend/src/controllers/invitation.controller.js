@@ -137,6 +137,7 @@ async function checkInvitation(req, res) {
 }
 
 // POST /api/invitations/:token/request { fullName, email, message }
+// Approbation automatique et immédiate — pas de validation manuelle admin.
 async function submitJoinRequest(req, res) {
   try {
     const invitation = await Invitation.findOne({ where: { token: req.params.token } });
@@ -162,14 +163,20 @@ async function submitJoinRequest(req, res) {
       fullName,
       email,
       message: message || null,
+      status: 'approved',
+      paymentRequired: false,
+      registrationToken: makeToken(),
     });
 
     invitation.usesCount += 1;
     await invitation.save();
 
+    const registrationLink = `${process.env.CLIENT_URL}/register?token=${request.registrationToken}`;
+
     return res.status(201).json({
-      message: 'Votre demande a été envoyée. Vous recevrez un lien dès qu\'elle sera approuvée.',
+      message: 'Demande approuvée automatiquement.',
       requestId: request.id,
+      registrationLink,
     });
   } catch (err) {
     console.error(err);
