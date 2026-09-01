@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-type Step = 'loading' | 'invalid' | 'form' | 'submitted';
+type Step = 'loading' | 'invalid' | 'form';
 
 export default function RequestInvite() {
   const { token } = useParams();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [requestId, setRequestId] = useState<string | null>(null);
-  const [status, setStatus] = useState<any>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const check = async () => {
@@ -27,28 +27,17 @@ export default function RequestInvite() {
     check();
   }, [token]);
 
-  useEffect(() => {
-    if (!requestId) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await api.get(`/invitations/requests/${requestId}/status`);
-        setStatus(res.data);
-      } catch {
-        /* silencieux */
-      }
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [requestId]);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSubmitting(true);
     try {
       const res = await api.post(`/invitations/${token}/request`, { fullName, email, message });
-      setRequestId(res.data.requestId);
-      setStep('submitted');
+      const url = new URL(res.data.registrationLink);
+      navigate(`${url.pathname}${url.search}`);
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Erreur lors de l\'envoi de la demande.');
+      setSubmitting(false);
     }
   };
 
@@ -56,9 +45,9 @@ export default function RequestInvite() {
     <div className="auth-shell">
       <div className="card auth-card">
         <div className="auth-logo" />
-<div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-strong)', marginBottom: 10 }}>
-  FriEnds
-</div>
+        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-strong)', marginBottom: 10 }}>
+          FriEnds
+        </div>
 
         {step === 'loading' && <p>Vérification de l'invitation…</p>}
 
@@ -71,9 +60,9 @@ export default function RequestInvite() {
 
         {step === 'form' && (
           <form onSubmit={submit}>
-            <h1 style={{ fontSize: '1.4rem', marginBottom: 4 }}>Demander l'accès</h1>
+            <h1 style={{ fontSize: '1.4rem', marginBottom: 4 }}>Rejoindre FriEnds</h1>
             <p style={{ color: 'var(--text-muted)', marginTop: 0, marginBottom: 20 }}>
-              Renseignez vos informations. Un administrateur examinera votre demande.
+              Renseignez vos informations pour créer votre compte.
             </p>
 
             {errorMsg && (
@@ -91,47 +80,12 @@ export default function RequestInvite() {
             <label className="field-label">Message (optionnel)</label>
             <textarea className="field" rows={3} value={message} onChange={(e) => setMessage(e.target.value)} style={{ marginBottom: 20 }} />
 
-            <button className="btn btn-primary" type="submit" style={{ width: '100%' }}>
-              Envoyer ma demande
+            <button className="btn btn-primary" type="submit" disabled={submitting} style={{ width: '100%' }}>
+              {submitting ? 'Envoi…' : 'Continuer'}
             </button>
           </form>
-        )}
-
-        {step === 'submitted' && (
-          <div>
-            <h1 style={{ fontSize: '1.4rem' }}>Demande envoyée ✅</h1>
-            <p style={{ color: 'var(--text-muted)' }}>
-              Vous recevrez un lien d'inscription dès que votre demande sera approuvée
-              {status?.paymentRequired ? ' et le paiement finalisé' : ''}.
-            </p>
-
-            {status && (
-              <div className="card" style={{ padding: 16, marginTop: 16 }}>
-                <p style={{ margin: 0, fontSize: '0.9rem' }}>
-                  Statut : <strong>{translateStatus(status.status)}</strong>
-                </p>
-                {status.paymentRequired && (
-                  <p style={{ margin: '6px 0 0', fontSize: '0.9rem' }}>
-                    Paiement : <strong>{translatePayment(status.paymentStatus)}</strong>
-                  </p>
-                )}
-                {status.registrationLink && (
-                  <a className="btn btn-primary" href={status.registrationLink} style={{ marginTop: 12, display: 'inline-flex' }}>
-                    Finaliser mon inscription
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>
   );
-}
-
-function translateStatus(s: string) {
-  return { pending: 'en attente', approved: 'approuvée', rejected: 'refusée' }[s] || s;
-}
-function translatePayment(s: string) {
-  return { none: 'non requis', pending: 'en attente', paid: 'payé', failed: 'échoué' }[s] || s;
 }
